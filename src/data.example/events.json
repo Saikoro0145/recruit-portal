@@ -1,0 +1,42 @@
+[
+  {
+    "id": "sample-dl-1",
+    "companyId": "sample-bank",
+    "title": "ES締切",
+    "type": "deadline",
+    "start": "2026-06-01",
+    "end": "2026-06-01",
+    "status": "pending",
+    "note": ""
+  },
+  {
+    "id": "sample-dl-2",
+    "companyId": "sample-sier",
+    "title": "応募締切",
+    "type": "deadline",
+    "start": "2026-06-15",
+    "end": "2026-06-15",
+    "status": "pending",
+    "note": ""
+  },
+  {
+    "id": "sample-int-1",
+    "companyId": "sample-bank",
+    "title": "サマーインターンシップ",
+    "type": "internship",
+    "start": "2026-08-03",
+    "end": "2026-08-07",
+    "status": "pending",
+    "note": ""
+  },
+  {
+    "id": "sample-int-2",
+    "companyId": "sample-sier",
+    "title": "インターンシップ",
+    "type": "internship",
+    "start": "2026-08-17",
+    "end": "2026-08-21",
+    "status": "pending",
+    "note": ""
+  }
+]

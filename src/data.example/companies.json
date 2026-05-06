@@ -1,0 +1,42 @@
+[
+  {
+    "id": "sample-bank",
+    "name": "サンプル銀行",
+    "category": "finance",
+    "color": "#ef4444",
+    "url": "",
+    "mypageUrl": "",
+    "loginId": "",
+    "notes": "# サンプル銀行\n\nここにメモを記入します。\n\n## 選考フロー\n\n- ES提出\n- Webテスト\n- 面接"
+  },
+  {
+    "id": "sample-securities",
+    "name": "サンプル証券",
+    "category": "finance",
+    "color": "#7c3aed",
+    "url": "",
+    "mypageUrl": "",
+    "loginId": "",
+    "notes": "# サンプル証券\n\nここにメモを記入します。"
+  },
+  {
+    "id": "sample-sier",
+    "name": "サンプルSIer",
+    "category": "sier",
+    "color": "#2563eb",
+    "url": "",
+    "mypageUrl": "",
+    "loginId": "",
+    "notes": "# サンプルSIer\n\nここにメモを記入します。"
+  },
+  {
+    "id": "sample-maker",
+    "name": "サンプルメーカー",
+    "category": "maker",
+    "color": "#16a34a",
+    "url": "",
+    "mypageUrl": "",
+    "loginId": "",
+    "notes": "# サンプルメーカー\n\nここにメモを記入します。"
+  }
+]

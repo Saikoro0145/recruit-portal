@@ -1,0 +1,5 @@
+[
+  { "id": "finance", "label": "金融", "color": "#3b82f6" },
+  { "id": "sier",    "label": "SIer", "color": "#8b5cf6" },
+  { "id": "maker",   "label": "メーカー", "color": "#22c55e" }
+]
