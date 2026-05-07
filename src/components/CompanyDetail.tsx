@@ -62,7 +62,18 @@ export default function CompanyDetail({ company, events, files }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleCopyLoginId = () => {
-    navigator.clipboard.writeText(loginId)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(loginId)
+    } else {
+      const el = document.createElement('textarea')
+      el.value = loginId
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
