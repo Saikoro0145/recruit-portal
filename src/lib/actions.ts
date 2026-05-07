@@ -63,7 +63,11 @@ export async function addCompany(data: {
 }) {
   const companies: Company[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'companies.json'), 'utf-8'))
   if (companies.find(c => c.id === data.id)) throw new Error('ID already exists')
-  companies.push({ ...data, notes: '', category: data.category as Company['category'] })
+  const readmePath = `${data.category}/${data.id}/README.md`
+  const readmeAbsPath = path.join(recruitRoot, readmePath)
+  fs.mkdirSync(path.dirname(readmeAbsPath), { recursive: true })
+  if (!fs.existsSync(readmeAbsPath)) fs.writeFileSync(readmeAbsPath, '')
+  companies.push({ ...data, readmePath, notes: '', category: data.category as Company['category'] })
   fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   revalidatePath('/')
   revalidatePath('/companies')
@@ -87,6 +91,7 @@ export async function addCategory(data: CategoryDef) {
   if (categories.find(c => c.id === data.id)) throw new Error('ID already exists')
   categories.push(data)
   fs.writeFileSync(categoriesPath, JSON.stringify(categories, null, 2))
+  fs.mkdirSync(path.join(recruitRoot, data.id), { recursive: true })
   revalidatePath('/')
   revalidatePath('/companies')
 }
