@@ -134,24 +134,24 @@ export default function CompanyDetail({ company, events, files }: Props) {
   const isPast = (dateStr: string) => new Date(dateStr) < today
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-4 sm:p-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div
           className="w-4 h-4 rounded-full flex-shrink-0"
           style={{ backgroundColor: company.color }}
         />
-        <h1 className="text-2xl font-bold">{company.name}</h1>
-        <div className="ml-auto flex items-center gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold flex-1 min-w-0 truncate">{company.name}</h1>
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {mypageUrl && (
             <a href={mypageUrl} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline">
+              className="text-sm text-primary hover:underline whitespace-nowrap">
               マイページ ↗
             </a>
           )}
           {officialUrl && (
             <a href={officialUrl} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline">
+              className="text-sm text-primary hover:underline whitespace-nowrap">
               公式サイト ↗
             </a>
           )}
@@ -249,7 +249,7 @@ export default function CompanyDetail({ company, events, files }: Props) {
                     <Input
                       value={editForm.title}
                       onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      className="h-8 text-sm flex-1 min-w-32"
+                      className="h-8 text-sm flex-1 min-w-[120px]"
                     />
                     <Select value={editForm.type} onValueChange={v => setEditForm(f => ({ ...f, type: v as InternEvent['type'] }))}>
                       <SelectTrigger className="h-8 text-xs w-28">
@@ -290,78 +290,79 @@ export default function CompanyDetail({ company, events, files }: Props) {
               return (
                 <div
                   key={event.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border ${past ? 'opacity-50' : ''} bg-card`}
+                  className={`flex gap-2 sm:gap-3 p-3 rounded-lg border ${past ? 'opacity-50' : ''} bg-card`}
                 >
                   {/* Type indicator */}
                   <div
-                    className="w-1 h-10 rounded-full flex-shrink-0"
+                    className="w-1 rounded-full flex-shrink-0 self-stretch"
                     style={{ backgroundColor: company.color }}
                   />
 
-                  {/* Date */}
-                  <div className="w-36 flex-shrink-0">
-                    <div className={`text-sm font-medium ${past ? 'text-muted-foreground line-through' : ''}`}>
-                      {formatDate(event.start)}
-                    </div>
-                    {event.end && event.end !== event.start && !isDeadline && (
-                      <div className="text-xs text-muted-foreground">
-                        〜 {formatDate(event.end)}
+                  {/* Content area: stacks on mobile, row on desktop */}
+                  <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-2">
+                    {/* Date */}
+                    <div className="sm:w-36 sm:flex-shrink-0">
+                      <div className={`text-sm font-medium ${past ? 'text-muted-foreground line-through' : ''}`}>
+                        {formatDate(event.start)}
                       </div>
-                    )}
-                  </div>
+                      {event.end && event.end !== event.start && !isDeadline && (
+                        <div className="text-xs text-muted-foreground">
+                          〜 {formatDate(event.end)}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Title & type */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {isDeadline && <span className="text-sm">⚠</span>}
-                      <span className="text-sm font-medium truncate">{event.title}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
-                        {TYPE_LABELS[event.type]}
-                      </span>
+                    {/* Title & type */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isDeadline && <span className="text-sm">⚠</span>}
+                        <span className="text-sm font-medium">{event.title}</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
+                          {TYPE_LABELS[event.type]}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Status selector + actions */}
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={currentStatus}
+                        onValueChange={(v) => handleStatusChange(event.id, v as Status)}
+                        disabled={isPending}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-full sm:w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([val, label]) => (
+                            <SelectItem key={val} value={val} className="text-xs">
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleEditOpen(event)}
+                        disabled={isPending}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDelete(event.id)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-
-                  {/* Status selector */}
-                  <div className="flex-shrink-0 w-32">
-                    <Select
-                      value={currentStatus}
-                      onValueChange={(v) => handleStatusChange(event.id, v as Status)}
-                      disabled={isPending}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([val, label]) => (
-                          <SelectItem key={val} value={val} className="text-xs">
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Edit button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                    onClick={() => handleEditOpen(event)}
-                    disabled={isPending}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-
-                  {/* Delete button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDelete(event.id)}
-                    disabled={isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
                 </div>
               )
             })}

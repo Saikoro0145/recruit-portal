@@ -98,10 +98,10 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">企業一覧</h1>
-        <div className="flex items-center gap-3">
+    <div className="p-4 sm:p-6">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold flex-1">企業一覧</h1>
+        <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-sm text-muted-foreground">{companies.length}社</span>
           <AddCategoryDialog />
           <AddCompanyDialog categories={categories} />

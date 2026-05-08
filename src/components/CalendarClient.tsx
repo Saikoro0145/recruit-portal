@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import Link from 'next/link'
 
 interface CalendarEvent {
@@ -156,6 +157,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const toggleCompany = (id: string) => {
     setHiddenCompanies(prev => {
@@ -297,65 +299,54 @@ export default function CalendarClient({ events, companies, categories }: Props)
     }
   }
 
-  return (
-    <div className="flex gap-4 p-4 h-[calc(100vh-3.5rem)]">
-      {/* Sidebar */}
-      <aside className="w-52 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-            企業
-          </h2>
-          <ul className="space-y-1">
-            {companies.map(c => {
-              const hidden = hiddenCompanies.has(c.id)
-              return (
-                <li key={c.id}>
-                  <button
-                    onClick={() => toggleCompany(c.id)}
-                    className="w-full flex items-center gap-2 text-sm hover:bg-accent rounded-md px-2 py-1 transition-colors"
-                  >
-                    <span
-                      className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 transition-colors"
-                      style={{
-                        backgroundColor: hidden ? 'transparent' : c.color,
-                        borderColor: c.color,
-                      }}
-                    />
-                    <span className={`truncate ${hidden ? 'text-muted-foreground line-through' : ''}`}>
-                      {c.name}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
+  const sidebarContent = (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">企業</h2>
+        <ul className="space-y-1">
+          {companies.map(c => {
+            const hidden = hiddenCompanies.has(c.id)
+            return (
+              <li key={c.id}>
+                <button
+                  onClick={() => toggleCompany(c.id)}
+                  className="w-full flex items-center gap-2 text-sm hover:bg-accent rounded-md px-2 py-1 transition-colors"
+                >
+                  <span
+                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 transition-colors"
+                    style={{ backgroundColor: hidden ? 'transparent' : c.color, borderColor: c.color }}
+                  />
+                  <span className={`truncate ${hidden ? 'text-muted-foreground line-through' : ''}`}>
+                    {c.name}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
 
-        {upcomingDeadlines.length > 0 && (
-          <div>
-            <button
-              onClick={() => setDeadlineOpen(v => !v)}
-              className="w-full flex items-center justify-between mb-2"
-            >
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                直近の締切
-              </h2>
-              <span className="text-xs text-muted-foreground">{deadlineOpen ? '▲' : '▼'}</span>
-            </button>
-            {deadlineOpen && <ul className="space-y-2">
+      {upcomingDeadlines.length > 0 && (
+        <div>
+          <button
+            onClick={() => setDeadlineOpen(v => !v)}
+            className="w-full flex items-center justify-between mb-2"
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">直近の締切</h2>
+            <span className="text-xs text-muted-foreground">{deadlineOpen ? '▲' : '▼'}</span>
+          </button>
+          {deadlineOpen && (
+            <ul className="space-y-2">
               {upcomingDeadlines.map(e => {
                 const days = daysUntil(e.start)
                 const urgencyClass = days <= 3
                   ? 'text-red-600 font-bold'
                   : days <= 7
-                    ? 'text-orange-500 font-semibold'
-                    : 'text-muted-foreground'
+                  ? 'text-orange-500 font-semibold'
+                  : 'text-muted-foreground'
                 return (
                   <li key={e.id} className="flex items-start gap-2 text-xs">
-                    <span
-                      className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
-                      style={{ backgroundColor: e.backgroundColor }}
-                    />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: e.backgroundColor }} />
                     <div className="min-w-0">
                       <div className={urgencyClass}>あと{days}日</div>
                       <div className="truncate text-foreground leading-tight">{e.title}</div>
@@ -364,70 +355,90 @@ export default function CalendarClient({ events, companies, categories }: Props)
                   </li>
                 )
               })}
-            </ul>}
-          </div>
-        )}
-
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-            凡例
-          </h2>
-          <ul className="space-y-1 text-xs text-muted-foreground">
-            <li className="flex items-center gap-2">
-              <span>⚠</span>
-              <span>締切</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="w-4 h-2 rounded bg-blue-500 opacity-80" />
-              <span>インターン期間</span>
-            </li>
-          </ul>
+            </ul>
+          )}
         </div>
+      )}
 
-        {overlaps.size > 0 && (
-          <OverlapWarning internships={internships.filter(e => overlaps.has(e.id))} />
-        )}
+      <div>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">凡例</h2>
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          <li className="flex items-center gap-2"><span>⚠</span><span>締切</span></li>
+          <li className="flex items-center gap-2">
+            <span className="w-4 h-2 rounded bg-blue-500 opacity-80" />
+            <span>インターン期間</span>
+          </li>
+        </ul>
+      </div>
+
+      {overlaps.size > 0 && (
+        <OverlapWarning internships={internships.filter(e => overlaps.has(e.id))} />
+      )}
+    </div>
+  )
+
+  return (
+    <div className="flex gap-4 p-4 md:h-[calc(100vh-3.5rem)]">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-52 flex-shrink-0 overflow-y-auto">
+        {sidebarContent}
       </aside>
 
       {/* Calendar */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-end gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          {/* Mobile: Sheet */}
           <Button
             size="sm"
             variant="outline"
-            onClick={() => {
-              setForm({ ...EMPTY_FORM })
-              setAddOpen(true)
-            }}
-            className="text-xs h-7"
+            className="text-xs h-7 md:hidden"
+            onClick={() => setSidebarOpen(true)}
           >
-            ＋ 追加
+            ☰ フィルター
           </Button>
-          <Button
-            size="sm"
-            variant={view === 'dayGridMonth' ? 'default' : 'outline'}
-            onClick={() => switchView('dayGridMonth')}
-            className="text-xs h-7"
-          >
-            月表示
-          </Button>
-          <Button
-            size="sm"
-            variant={view === 'listMonth' ? 'default' : 'outline'}
-            onClick={() => switchView('listMonth')}
-            className="text-xs h-7"
-          >
-            リスト
-          </Button>
+          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SheetContent side="left" className="w-64 overflow-y-auto">
+              <SheetHeader className="mb-4">
+                <SheetTitle>フィルター</SheetTitle>
+              </SheetHeader>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setForm({ ...EMPTY_FORM }); setAddOpen(true) }}
+              className="text-xs h-7"
+            >
+              ＋ 追加
+            </Button>
+            <Button
+              size="sm"
+              variant={view === 'dayGridMonth' ? 'default' : 'outline'}
+              onClick={() => switchView('dayGridMonth')}
+              className="text-xs h-7"
+            >
+              月表示
+            </Button>
+            <Button
+              size="sm"
+              variant={view === 'listMonth' ? 'default' : 'outline'}
+              onClick={() => switchView('listMonth')}
+              className="text-xs h-7"
+            >
+              リスト
+            </Button>
+          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto">
           <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, interactionPlugin, listPlugin]}
             initialView="dayGridMonth"
             initialDate={new Date().toISOString().split('T')[0]}
             locale="ja"
-            height="100%"
+            height="auto"
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',

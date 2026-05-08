@@ -29,7 +29,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
         <nav className="border-b bg-card shadow-sm">
-          <div className="max-w-screen-2xl mx-auto px-4 h-14 flex items-center gap-6">
+          <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 h-14 flex items-center gap-3 sm:gap-6">
             <Link href="/" className="font-bold text-lg tracking-tight">
               就活スケジュール管理
             </Link>
