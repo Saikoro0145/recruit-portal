@@ -1,7 +1,10 @@
+@echo off
 setlocal
-@if not "%~0"=="%~dp0.\%~nx0" start /min cmd /c,"%~dp0.\%~nx0" %* & goto :eof
 
 cd /d "%~dp0"
-npm run start
 
-exit 0
+start "Recruit Portal Server" /min cmd /c "npm.cmd run start"
+
+start "" "http://localhost:3000"
+
+exit /b 0
