@@ -73,13 +73,15 @@ export async function addCompany(data: {
   revalidatePath('/companies')
 }
 
-export async function updateCompanyAccount(id: string, mypageUrl: string, loginId: string, url: string) {
+export async function updateCompanyAccount(id: string, mypageUrl: string, loginId: string, url: string, webTestType?: string, password?: string) {
   const companies: Company[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'companies.json'), 'utf-8'))
   const idx = companies.findIndex(c => c.id === id)
   if (idx !== -1) {
     companies[idx].mypageUrl = mypageUrl
     companies[idx].loginId = loginId
     companies[idx].url = url
+    companies[idx].webTestType = webTestType ?? ''
+    companies[idx].password = password ?? ''
     fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   }
   revalidatePath(`/companies/${id}`)

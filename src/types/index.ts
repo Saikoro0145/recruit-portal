@@ -18,6 +18,8 @@ export interface Company {
   readmePath?: string
   mypageUrl?: string
   loginId?: string
+  webTestType?: string
+  password?: string
 }
 
 export interface InternEvent {

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, Pencil, Copy, Check } from 'lucide-react'
+import { Trash2, Pencil, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { Company, InternEvent, Status } from '@/types'
 import { CompanyFile } from '@/lib/data'
 import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount } from '@/lib/actions'
@@ -58,6 +58,9 @@ export default function CompanyDetail({ company, events, files }: Props) {
   const [officialUrl, setOfficialUrl] = useState(company.url ?? '')
   const [mypageUrl, setMypageUrl] = useState(company.mypageUrl ?? '')
   const [loginId, setLoginId] = useState(company.loginId ?? '')
+  const [webTestType, setWebTestType] = useState(company.webTestType ?? '')
+  const [password, setPassword] = useState(company.password ?? '')
+  const [showPassword, setShowPassword] = useState(false)
   const [accountEdit, setAccountEdit] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -169,7 +172,7 @@ export default function CompanyDetail({ company, events, files }: Props) {
               <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setAccountEdit(false)} disabled={isPending}>キャンセル</Button>
               <Button size="sm" className="h-6 text-xs" disabled={isPending} onClick={() => {
                 startTransition(async () => {
-                  await updateCompanyAccount(company.id, mypageUrl, loginId, officialUrl)
+                  await updateCompanyAccount(company.id, mypageUrl, loginId, officialUrl, webTestType, password)
                   setAccountEdit(false)
                 })
               }}>保存</Button>
@@ -189,6 +192,14 @@ export default function CompanyDetail({ company, events, files }: Props) {
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground w-20 flex-shrink-0">ログインID</span>
               <Input value={loginId} onChange={e => setLoginId(e.target.value)} className="h-7 text-xs" placeholder="メールアドレスなど" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Webテスト</span>
+              <Input value={webTestType} onChange={e => setWebTestType(e.target.value)} className="h-7 text-xs" placeholder="SPI・玉手箱・TG-WEBなど" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground w-20 flex-shrink-0">パスワード</span>
+              <Input value={password} onChange={e => setPassword(e.target.value)} className="h-7 text-xs" placeholder="マイページパスワード" />
             </div>
           </div>
         ) : (
@@ -212,6 +223,23 @@ export default function CompanyDetail({ company, events, files }: Props) {
                   <span className="font-mono">{loginId}</span>
                   <button onClick={handleCopyLoginId} className="text-muted-foreground hover:text-foreground transition-colors">
                     {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
+              ) : <span className="text-muted-foreground italic">未設定</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground w-20 flex-shrink-0">Webテスト</span>
+              {webTestType
+                ? <span className="font-medium">{webTestType}</span>
+                : <span className="text-muted-foreground italic">未設定</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground w-20 flex-shrink-0">パスワード</span>
+              {password ? (
+                <div className="flex items-center gap-1">
+                  <span className="font-mono">{showPassword ? password : '••••••••'}</span>
+                  <button onClick={() => setShowPassword(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                   </button>
                 </div>
               ) : <span className="text-muted-foreground italic">未設定</span>}
