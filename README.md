@@ -43,10 +43,15 @@ RECRUIT_ROOT=/Users/yourname/Documents/recruit
 
 設定しない場合は `recruit-portal/` の親ディレクトリがデフォルトになります。
 
-### 4. 起動
+### 4.ビルド
+```bash
+npm run build
+```
+
+### 5. 起動
 
 ```bash
-npm run dev
+npm run start
 ```
 
 `http://localhost:3000` にアクセスします。
