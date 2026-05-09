@@ -53,6 +53,7 @@ npm run build
 ```bash
 npm run start
 ```
+※ Windowsの場合 Start_NextServer_rp.bat をスタートメニューから実行することでも起動できます
 
 `http://localhost:3000` にアクセスします。
 
