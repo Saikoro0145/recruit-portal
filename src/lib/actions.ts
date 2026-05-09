@@ -60,6 +60,8 @@ export async function addCompany(data: {
   url: string
   mypageUrl: string
   loginId: string
+  webTestType?: string
+  password?: string
 }) {
   const companies: Company[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'companies.json'), 'utf-8'))
   if (companies.find(c => c.id === data.id)) throw new Error('ID already exists')

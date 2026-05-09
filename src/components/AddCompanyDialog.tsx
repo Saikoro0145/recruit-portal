@@ -18,7 +18,7 @@ export default function AddCompanyDialog({ categories }: Props) {
   const router = useRouter()
   const defaultCategory = categories[0]?.id ?? ''
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '' })
+  const [form, setForm] = useState({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '', webTestType: '', password: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,7 +29,7 @@ export default function AddCompanyDialog({ categories }: Props) {
     try {
       await addCompany(form)
       setOpen(false)
-      setForm({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '' })
+      setForm({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '', webTestType: '', password: '' })
       router.refresh()
     } catch {
       setError('このIDはすでに使われています')
@@ -42,7 +42,7 @@ export default function AddCompanyDialog({ categories }: Props) {
     <>
       <Button size="sm" onClick={() => setOpen(true)}>＋ 企業を追加</Button>
 
-      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setForm({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '' }); setError('') } }}>
+      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setForm({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '', webTestType: '', password: '' }); setError('') } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>企業を追加</DialogTitle>
@@ -119,6 +119,24 @@ export default function AddCompanyDialog({ categories }: Props) {
                 value={form.loginId}
                 onChange={e => setForm(f => ({ ...f, loginId: e.target.value }))}
                 placeholder="メールアドレスなど"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">パスワード（任意）</Label>
+              <Input
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="マイページパスワード"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Webテスト種別（任意）</Label>
+              <Input
+                value={form.webTestType}
+                onChange={e => setForm(f => ({ ...f, webTestType: e.target.value }))}
+                placeholder="SPI・玉手箱・TG-WEBなど"
               />
             </div>
 
