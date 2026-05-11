@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -16,7 +17,7 @@ import {
 import { Trash2, Pencil, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { Company, InternEvent, Status } from '@/types'
 import { CompanyFile } from '@/lib/data'
-import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount } from '@/lib/actions'
+import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount, deleteCompany } from '@/lib/actions'
 import { Input } from '@/components/ui/input'
 
 const FILE_ICONS: Record<string, string> = {
@@ -46,6 +47,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 export default function CompanyDetail({ company, events, files }: Props) {
+  const router = useRouter()
   const [notes, setNotes] = useState(company.notes)
   const [editMode, setEditMode] = useState(false)
   const [editValue, setEditValue] = useState(company.notes)
@@ -111,6 +113,16 @@ export default function CompanyDetail({ company, events, files }: Props) {
     })
   }
 
+  const handleDeleteCompany = () => {
+    const ok = window.confirm(`「${company.name}」を削除します。\n関連イベントとフォルダもすべて削除されます。\nよろしいですか？`)
+    if (!ok) return
+    startTransition(async () => {
+      await deleteCompany(company.id)
+      router.push('/companies')
+      router.refresh()
+    })
+  }
+
   const handleEditOpen = (event: InternEvent) => {
     setEditForm({ title: event.title, type: event.type, start: event.start, end: event.end })
     setEditingId(event.id)
@@ -158,6 +170,16 @@ export default function CompanyDetail({ company, events, files }: Props) {
               公式サイト ↗
             </a>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+            onClick={handleDeleteCompany}
+            disabled={isPending}
+            title="企業を削除"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
