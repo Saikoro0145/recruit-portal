@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import AddCompanyDialog from '@/components/AddCompanyDialog'
 import AddCategoryDialog from '@/components/AddCategoryDialog'
-import { CategoryDef } from '@/types'
+import DeleteCategoryButton from '@/components/DeleteCategoryButton'
 
 const STATUS_LABELS: Record<string, string> = {
   pending: '未対応',
@@ -35,7 +35,7 @@ export default function CompaniesPage() {
   const grouped = categories.map(cat => ({
     cat,
     companies: companies.filter(c => c.category === cat.id),
-  })).filter(g => g.companies.length > 0)
+  }))
 
   const renderCard = (company: ReturnType<typeof getCompanies>[number]) => {
     const companyEvents = events.filter(e => e.companyId === company.id)
@@ -121,10 +121,15 @@ export default function CompaniesPage() {
               >
                 {companies.length}社
               </span>
+              <DeleteCategoryButton id={cat.id} label={cat.label} disabled={companies.length > 0} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {companies.map(renderCard)}
-            </div>
+            {companies.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {companies.map(renderCard)}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">企業なし</p>
+            )}
           </section>
         ))}
       </div>
