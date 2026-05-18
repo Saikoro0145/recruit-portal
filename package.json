@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "gen-key": "node scripts/gen-key.mjs",
+    "encrypt-existing": "node scripts/encrypt-existing.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

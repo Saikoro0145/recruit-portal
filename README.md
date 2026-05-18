@@ -27,21 +27,39 @@ npm install
 cp -r src/data.example src/data
 ```
 
-### 3. 環境変数を設定（オプション）
-
-企業ごとのREADMEファイルをアプリと別ディレクトリで管理したい場合は `.env.local` を作成します。
+### 3. 環境変数を設定
 
 ```bash
 cp .env.local.example .env.local
 ```
 
-`.env.local` を編集して `RECRUIT_ROOT` にあなたのディレクトリパスを指定します。
+#### RECRUIT_ROOT（オプション）
+
+企業ごとのREADMEファイルをアプリと別ディレクトリで管理したい場合は `RECRUIT_ROOT` を指定します。
 
 ```
 RECRUIT_ROOT=/Users/yourname/Documents/recruit
 ```
 
 設定しない場合は `recruit-portal/` の親ディレクトリがデフォルトになります。
+
+#### RECRUIT_SECRET_KEY（必須・パスワード暗号化用）
+
+`companies.json` に保存される企業マイページパスワードを AES-256-GCM で暗号化するための鍵。
+
+```bash
+npm run gen-key
+```
+
+出力された `RECRUIT_SECRET_KEY=...` の行を `.env.local` に貼り付けます。**この値は絶対に Git に commit しないこと**。
+
+既に平文パスワードを登録済の場合は、鍵設定後に下記で一括暗号化できます:
+
+```bash
+npm run encrypt-existing
+```
+
+新規追加・編集時は自動で暗号化されます。
 
 ### 4.ビルド
 ```bash

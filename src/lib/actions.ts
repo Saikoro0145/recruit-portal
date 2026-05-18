@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { revalidatePath } from 'next/cache'
 import { Company, CategoryDef, InternEvent } from '@/types'
+import { encryptPassword } from './crypto'
 
 const dataDir = path.join(process.cwd(), 'src/data')
 const recruitRoot = process.env.RECRUIT_ROOT
@@ -69,7 +70,14 @@ export async function addCompany(data: {
   const readmeAbsPath = path.join(recruitRoot, readmePath)
   fs.mkdirSync(path.dirname(readmeAbsPath), { recursive: true })
   if (!fs.existsSync(readmeAbsPath)) fs.writeFileSync(readmeAbsPath, '')
-  companies.push({ ...data, readmePath, notes: '', category: data.category as Company['category'] })
+  const encryptedPassword = data.password ? encryptPassword(data.password) : ''
+  companies.push({
+    ...data,
+    readmePath,
+    notes: '',
+    category: data.category as Company['category'],
+    password: encryptedPassword,
+  })
   fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   revalidatePath('/')
   revalidatePath('/companies')
@@ -83,7 +91,7 @@ export async function updateCompanyAccount(id: string, mypageUrl: string, loginI
     companies[idx].loginId = loginId
     companies[idx].url = url
     companies[idx].webTestType = webTestType ?? ''
-    companies[idx].password = password ?? ''
+    companies[idx].password = password ? encryptPassword(password) : ''
     fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   }
   revalidatePath(`/companies/${id}`)
