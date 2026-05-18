@@ -38,6 +38,12 @@ export default function RootLayout({
                 href="/"
                 className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
+                ダッシュボード
+              </Link>
+              <Link
+                href="/calendar"
+                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
                 カレンダー
               </Link>
               <Link

@@ -7,13 +7,24 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { addCategory } from '@/lib/actions'
+import { CategoryDef } from '@/types'
+import { pickUnusedColor } from '@/lib/utils'
+import ColorPicker from '@/components/ColorPicker'
 
-const EMPTY = { id: '', label: '', color: '#6366f1' }
+interface Props {
+  categories: CategoryDef[]
+}
 
-export default function AddCategoryDialog() {
+export default function AddCategoryDialog({ categories }: Props) {
   const router = useRouter()
+  const usedColors = categories.map(c => c.color)
+  const initialForm = () => ({
+    id: '',
+    label: '',
+    color: pickUnusedColor(usedColors),
+  })
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState(EMPTY)
+  const [form, setForm] = useState(initialForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -29,7 +40,7 @@ export default function AddCategoryDialog() {
     try {
       await addCategory(form)
       setOpen(false)
-      setForm(EMPTY)
+      setForm(initialForm())
       router.refresh()
     } catch {
       setError('このIDはすでに使われています')
@@ -42,7 +53,7 @@ export default function AddCategoryDialog() {
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>＋ 業界を追加</Button>
 
-      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setForm(EMPTY); setError('') } }}>
+      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setForm(initialForm()); setError('') } }}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
             <DialogTitle>業界を追加</DialogTitle>
@@ -69,16 +80,12 @@ export default function AddCategoryDialog() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs">カラー</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={form.color}
-                  onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                  className="w-8 h-8 rounded cursor-pointer border"
-                />
-                <span className="text-xs text-muted-foreground font-mono">{form.color}</span>
-              </div>
+              <Label className="text-xs">カラー（未使用色を自動選択）</Label>
+              <ColorPicker
+                value={form.color}
+                onChange={c => setForm(f => ({ ...f, color: c }))}
+                usedColors={usedColors}
+              />
             </div>
 
             {error && <p className="text-xs text-destructive">{error}</p>}
