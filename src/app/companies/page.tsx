@@ -103,8 +103,8 @@ export default function CompaniesPage() {
         <h1 className="text-2xl font-bold flex-1">企業一覧</h1>
         <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-sm text-muted-foreground">{companies.length}社</span>
-          <AddCategoryDialog />
-          <AddCompanyDialog categories={categories} />
+          <AddCategoryDialog categories={categories} />
+          <AddCompanyDialog categories={categories} companies={companies} />
         </div>
       </div>
 
