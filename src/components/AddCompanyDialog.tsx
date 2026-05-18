@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -8,19 +8,52 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { addCompany } from '@/lib/actions'
-import { CategoryDef } from '@/types'
+import { CategoryDef, Company } from '@/types'
+import { pickUnusedColor } from '@/lib/utils'
+import ColorPicker from '@/components/ColorPicker'
 
 interface Props {
   categories: CategoryDef[]
+  companies: Company[]
 }
 
-export default function AddCompanyDialog({ categories }: Props) {
+export default function AddCompanyDialog({ categories, companies }: Props) {
   const router = useRouter()
   const defaultCategory = categories[0]?.id ?? ''
+
+  const colorsByCategory = (catId: string) =>
+    companies.filter(c => c.category === catId).map(c => c.color)
+
+  const initialForm = () => ({
+    id: '',
+    name: '',
+    category: defaultCategory,
+    color: pickUnusedColor(colorsByCategory(defaultCategory)),
+    url: '',
+    mypageUrl: '',
+    loginId: '',
+    webTestType: '',
+    password: '',
+  })
+
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '', webTestType: '', password: '' })
+  const [form, setForm] = useState(initialForm)
+  const [colorTouched, setColorTouched] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // カテゴリ変更時、色未編集なら自動で同業界の未使用色に切り替え
+  useEffect(() => {
+    if (colorTouched) return
+    setForm(f => ({ ...f, color: pickUnusedColor(colorsByCategory(f.category)) }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.category])
+
+  const reset = () => {
+    setForm(initialForm())
+    setColorTouched(false)
+    setError('')
+  }
 
   const handleSave = async () => {
     if (!form.id || !form.name || !form.category) return
@@ -29,7 +62,7 @@ export default function AddCompanyDialog({ categories }: Props) {
     try {
       await addCompany(form)
       setOpen(false)
-      setForm({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '', webTestType: '', password: '' })
+      reset()
       router.refresh()
     } catch {
       setError('このIDはすでに使われています')
@@ -42,7 +75,7 @@ export default function AddCompanyDialog({ categories }: Props) {
     <>
       <Button size="sm" onClick={() => setOpen(true)}>＋ 企業を追加</Button>
 
-      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setForm({ id: '', name: '', category: defaultCategory, color: '#6366f1', url: '', mypageUrl: '', loginId: '', webTestType: '', password: '' }); setError('') } }}>
+      <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) reset() }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>企業を追加</DialogTitle>
@@ -68,31 +101,25 @@ export default function AddCompanyDialog({ categories }: Props) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">カテゴリ</Label>
-                <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v ?? f.category }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1">
+              <Label className="text-xs">カテゴリ</Label>
+              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v ?? f.category }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs">カラー</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={form.color}
-                    onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                    className="w-8 h-8 rounded cursor-pointer border"
-                  />
-                  <span className="text-xs text-muted-foreground font-mono">{form.color}</span>
-                </div>
-              </div>
+            <div className="space-y-1">
+              <Label className="text-xs">カラー（同業界で未使用の色を自動選択）</Label>
+              <ColorPicker
+                value={form.color}
+                onChange={c => { setForm(f => ({ ...f, color: c })); setColorTouched(true) }}
+                usedColors={colorsByCategory(form.category)}
+              />
             </div>
 
             <div className="space-y-1">
