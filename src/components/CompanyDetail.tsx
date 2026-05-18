@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -16,7 +17,7 @@ import {
 import { Trash2, Pencil, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { Company, InternEvent, Status } from '@/types'
 import { CompanyFile } from '@/lib/data'
-import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount } from '@/lib/actions'
+import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount, deleteCompany } from '@/lib/actions'
 import { Input } from '@/components/ui/input'
 
 const FILE_ICONS: Record<string, string> = {
@@ -46,6 +47,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 export default function CompanyDetail({ company, events, files }: Props) {
+  const router = useRouter()
   const [notes, setNotes] = useState(company.notes)
   const [editMode, setEditMode] = useState(false)
   const [editValue, setEditValue] = useState(company.notes)
@@ -62,14 +64,15 @@ export default function CompanyDetail({ company, events, files }: Props) {
   const [password, setPassword] = useState(company.password ?? '')
   const [showPassword, setShowPassword] = useState(false)
   const [accountEdit, setAccountEdit] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<'loginId' | 'password' | null>(null)
 
-  const handleCopyLoginId = () => {
+  const copyToClipboard = (text: string, key: 'loginId' | 'password') => {
+    if (!text) return
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(loginId)
+      navigator.clipboard.writeText(text)
     } else {
       const el = document.createElement('textarea')
-      el.value = loginId
+      el.value = text
       el.style.position = 'fixed'
       el.style.opacity = '0'
       document.body.appendChild(el)
@@ -77,8 +80,8 @@ export default function CompanyDetail({ company, events, files }: Props) {
       document.execCommand('copy')
       document.body.removeChild(el)
     }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    setCopiedKey(key)
+    setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 1500)
   }
   const [isPending, startTransition] = useTransition()
 
@@ -108,6 +111,16 @@ export default function CompanyDetail({ company, events, files }: Props) {
     setEventList(prev => prev.filter(e => e.id !== eventId))
     startTransition(async () => {
       await deleteEvent(eventId)
+    })
+  }
+
+  const handleDeleteCompany = () => {
+    const ok = window.confirm(`「${company.name}」を削除します。\n関連イベントとフォルダもすべて削除されます。\nよろしいですか？`)
+    if (!ok) return
+    startTransition(async () => {
+      await deleteCompany(company.id)
+      router.push('/companies')
+      router.refresh()
     })
   }
 
@@ -158,6 +171,16 @@ export default function CompanyDetail({ company, events, files }: Props) {
               公式サイト ↗
             </a>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+            onClick={handleDeleteCompany}
+            disabled={isPending}
+            title="企業を削除"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
@@ -221,8 +244,12 @@ export default function CompanyDetail({ company, events, files }: Props) {
               {loginId ? (
                 <div className="flex items-center gap-1">
                   <span className="font-mono">{loginId}</span>
-                  <button onClick={handleCopyLoginId} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  <button
+                    onClick={() => copyToClipboard(loginId, 'loginId')}
+                    title="コピー"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {copiedKey === 'loginId' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               ) : <span className="text-muted-foreground italic">未設定</span>}
@@ -238,8 +265,19 @@ export default function CompanyDetail({ company, events, files }: Props) {
               {password ? (
                 <div className="flex items-center gap-1">
                   <span className="font-mono">{showPassword ? password : '••••••••'}</span>
-                  <button onClick={() => setShowPassword(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <button
+                    onClick={() => setShowPassword(v => !v)}
+                    title={showPassword ? '隠す' : '表示'}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  </button>
+                  <button
+                    onClick={() => copyToClipboard(password, 'password')}
+                    title="コピー"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {copiedKey === 'password' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               ) : <span className="text-muted-foreground italic">未設定</span>}
@@ -463,18 +501,20 @@ export default function CompanyDetail({ company, events, files }: Props) {
                 <li key={f.name} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                   <span className="text-lg flex-shrink-0">{FILE_ICONS[f.ext] ?? '📎'}</span>
                   <span className="flex-1 text-sm font-medium truncate">{f.name}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-shrink-0 h-7 text-xs"
-                    onClick={() => fetch('/api/open', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ filePath: f.fullPath }),
-                    })}
+                  <a
+                    href={`/api/open?path=${encodeURIComponent(f.relativePath)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0"
                   >
-                    開く
-                  </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                    >
+                      開く
+                    </Button>
+                  </a>
                 </li>
               ))}
             </ul>

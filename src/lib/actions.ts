@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { revalidatePath } from 'next/cache'
 import { Company, CategoryDef, InternEvent } from '@/types'
+import { encryptPassword } from './crypto'
 
 const dataDir = path.join(process.cwd(), 'src/data')
 const recruitRoot = process.env.RECRUIT_ROOT
@@ -69,7 +70,14 @@ export async function addCompany(data: {
   const readmeAbsPath = path.join(recruitRoot, readmePath)
   fs.mkdirSync(path.dirname(readmeAbsPath), { recursive: true })
   if (!fs.existsSync(readmeAbsPath)) fs.writeFileSync(readmeAbsPath, '')
-  companies.push({ ...data, readmePath, notes: '', category: data.category as Company['category'] })
+  const encryptedPassword = data.password ? encryptPassword(data.password) : ''
+  companies.push({
+    ...data,
+    readmePath,
+    notes: '',
+    category: data.category as Company['category'],
+    password: encryptedPassword,
+  })
   fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   revalidatePath('/')
   revalidatePath('/companies')
@@ -83,7 +91,7 @@ export async function updateCompanyAccount(id: string, mypageUrl: string, loginI
     companies[idx].loginId = loginId
     companies[idx].url = url
     companies[idx].webTestType = webTestType ?? ''
-    companies[idx].password = password ?? ''
+    companies[idx].password = password ? encryptPassword(password) : ''
     fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   }
   revalidatePath(`/companies/${id}`)
@@ -96,6 +104,46 @@ export async function addCategory(data: CategoryDef) {
   categories.push(data)
   fs.writeFileSync(categoriesPath, JSON.stringify(categories, null, 2))
   fs.mkdirSync(path.join(recruitRoot, data.id), { recursive: true })
+  revalidatePath('/')
+  revalidatePath('/companies')
+}
+
+export async function deleteCompany(id: string) {
+  const companiesPath = path.join(dataDir, 'companies.json')
+  const eventsPath = path.join(dataDir, 'events.json')
+  const companies: Company[] = JSON.parse(fs.readFileSync(companiesPath, 'utf-8'))
+  const company = companies.find(c => c.id === id)
+  if (!company) throw new Error('Company not found')
+
+  const folderRel = company.readmePath ? path.dirname(company.readmePath) : path.join(company.category, company.id)
+  const folderAbs = path.join(recruitRoot, folderRel)
+  if (fs.existsSync(folderAbs)) fs.rmSync(folderAbs, { recursive: true, force: true })
+
+  fs.writeFileSync(companiesPath, JSON.stringify(companies.filter(c => c.id !== id), null, 2))
+
+  const events: InternEvent[] = JSON.parse(fs.readFileSync(eventsPath, 'utf-8'))
+  fs.writeFileSync(eventsPath, JSON.stringify(events.filter(e => e.companyId !== id), null, 2))
+
+  revalidatePath('/')
+  revalidatePath('/companies')
+}
+
+export async function deleteCategory(id: string) {
+  const companiesPath = path.join(dataDir, 'companies.json')
+  const companies: Company[] = JSON.parse(fs.readFileSync(companiesPath, 'utf-8'))
+  const remaining = companies.filter(c => c.category === id)
+  if (remaining.length > 0) throw new Error('Category has companies')
+
+  const categoriesPath = path.join(dataDir, 'categories.json')
+  const categories: CategoryDef[] = JSON.parse(fs.readFileSync(categoriesPath, 'utf-8'))
+  fs.writeFileSync(categoriesPath, JSON.stringify(categories.filter(c => c.id !== id), null, 2))
+
+  const folderAbs = path.join(recruitRoot, id)
+  if (fs.existsSync(folderAbs)) {
+    const entries = fs.readdirSync(folderAbs)
+    if (entries.length === 0) fs.rmdirSync(folderAbs)
+  }
+
   revalidatePath('/')
   revalidatePath('/companies')
 }
