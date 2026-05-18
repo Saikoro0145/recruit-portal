@@ -10,6 +10,13 @@ const recruitRoot = process.env.RECRUIT_ROOT
   ? path.resolve(process.env.RECRUIT_ROOT)
   : path.join(process.cwd(), '..')
 
+function revalidateAll() {
+  revalidatePath('/')
+  revalidatePath('/calendar')
+  revalidatePath('/companies')
+  revalidatePath('/companies/[id]', 'page')
+}
+
 export async function updateCompanyNotes(id: string, notes: string) {
   const companies: Company[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'companies.json'), 'utf-8'))
   const company = companies.find(c => c.id === id)
@@ -22,8 +29,7 @@ export async function updateCompanyNotes(id: string, notes: string) {
       fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
     }
   }
-  revalidatePath('/companies')
-  revalidatePath(`/companies/${id}`)
+  revalidateAll()
 }
 
 export async function updateEventStatus(id: string, status: string) {
@@ -33,8 +39,7 @@ export async function updateEventStatus(id: string, status: string) {
     events[idx].status = status as InternEvent['status']
     fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify(events, null, 2))
   }
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function addEvent(event: Omit<InternEvent, 'id'>) {
@@ -42,15 +47,13 @@ export async function addEvent(event: Omit<InternEvent, 'id'>) {
   const newEvent: InternEvent = { ...event, id: `evt-${Date.now()}` }
   events.push(newEvent)
   fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify(events, null, 2))
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function deleteEvent(id: string) {
   const events: InternEvent[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'events.json'), 'utf-8'))
   fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify(events.filter(e => e.id !== id), null, 2))
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function addCompany(data: {
@@ -79,8 +82,7 @@ export async function addCompany(data: {
     password: encryptedPassword,
   })
   fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function updateCompanyAccount(id: string, mypageUrl: string, loginId: string, url: string, webTestType?: string, password?: string) {
@@ -94,7 +96,7 @@ export async function updateCompanyAccount(id: string, mypageUrl: string, loginI
     companies[idx].password = password ? encryptPassword(password) : ''
     fs.writeFileSync(path.join(dataDir, 'companies.json'), JSON.stringify(companies, null, 2))
   }
-  revalidatePath(`/companies/${id}`)
+  revalidateAll()
 }
 
 export async function addCategory(data: CategoryDef) {
@@ -104,8 +106,7 @@ export async function addCategory(data: CategoryDef) {
   categories.push(data)
   fs.writeFileSync(categoriesPath, JSON.stringify(categories, null, 2))
   fs.mkdirSync(path.join(recruitRoot, data.id), { recursive: true })
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function deleteCompany(id: string) {
@@ -124,8 +125,7 @@ export async function deleteCompany(id: string) {
   const events: InternEvent[] = JSON.parse(fs.readFileSync(eventsPath, 'utf-8'))
   fs.writeFileSync(eventsPath, JSON.stringify(events.filter(e => e.companyId !== id), null, 2))
 
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function deleteCategory(id: string) {
@@ -144,8 +144,7 @@ export async function deleteCategory(id: string) {
     if (entries.length === 0) fs.rmdirSync(folderAbs)
   }
 
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
 
 export async function updateEvent(id: string, data: Partial<Omit<InternEvent, 'id' | 'companyId'>>) {
@@ -155,6 +154,5 @@ export async function updateEvent(id: string, data: Partial<Omit<InternEvent, 'i
     events[idx] = { ...events[idx], ...data }
     fs.writeFileSync(path.join(dataDir, 'events.json'), JSON.stringify(events, null, 2))
   }
-  revalidatePath('/')
-  revalidatePath('/companies')
+  revalidateAll()
 }
