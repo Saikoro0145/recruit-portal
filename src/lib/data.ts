@@ -32,6 +32,7 @@ export function getEvents(): InternEvent[] {
 export interface CompanyFile {
   name: string
   fullPath: string
+  relativePath: string
   ext: string
 }
 
@@ -41,11 +42,15 @@ export function getCompanyFiles(company: Company): CompanyFile[] {
   try {
     return fs.readdirSync(folder)
       .filter(f => !f.startsWith('.'))
-      .map(name => ({
-        name,
-        fullPath: path.join(folder, name),
-        ext: path.extname(name).toLowerCase().slice(1),
-      }))
+      .map(name => {
+        const fullPath = path.join(folder, name)
+        return {
+          name,
+          fullPath,
+          relativePath: path.relative(recruitRoot, fullPath),
+          ext: path.extname(name).toLowerCase().slice(1),
+        }
+      })
   } catch {
     return []
   }

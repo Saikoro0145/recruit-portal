@@ -485,18 +485,20 @@ export default function CompanyDetail({ company, events, files }: Props) {
                 <li key={f.name} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                   <span className="text-lg flex-shrink-0">{FILE_ICONS[f.ext] ?? '📎'}</span>
                   <span className="flex-1 text-sm font-medium truncate">{f.name}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-shrink-0 h-7 text-xs"
-                    onClick={() => fetch('/api/open', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ filePath: f.fullPath }),
-                    })}
+                  <a
+                    href={`/api/open?path=${encodeURIComponent(f.relativePath)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-shrink-0"
                   >
-                    開く
-                  </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                    >
+                      開く
+                    </Button>
+                  </a>
                 </li>
               ))}
             </ul>
