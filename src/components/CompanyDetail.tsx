@@ -64,14 +64,15 @@ export default function CompanyDetail({ company, events, files }: Props) {
   const [password, setPassword] = useState(company.password ?? '')
   const [showPassword, setShowPassword] = useState(false)
   const [accountEdit, setAccountEdit] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<'loginId' | 'password' | null>(null)
 
-  const handleCopyLoginId = () => {
+  const copyToClipboard = (text: string, key: 'loginId' | 'password') => {
+    if (!text) return
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(loginId)
+      navigator.clipboard.writeText(text)
     } else {
       const el = document.createElement('textarea')
-      el.value = loginId
+      el.value = text
       el.style.position = 'fixed'
       el.style.opacity = '0'
       document.body.appendChild(el)
@@ -79,8 +80,8 @@ export default function CompanyDetail({ company, events, files }: Props) {
       document.execCommand('copy')
       document.body.removeChild(el)
     }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    setCopiedKey(key)
+    setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 1500)
   }
   const [isPending, startTransition] = useTransition()
 
@@ -243,8 +244,12 @@ export default function CompanyDetail({ company, events, files }: Props) {
               {loginId ? (
                 <div className="flex items-center gap-1">
                   <span className="font-mono">{loginId}</span>
-                  <button onClick={handleCopyLoginId} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                  <button
+                    onClick={() => copyToClipboard(loginId, 'loginId')}
+                    title="コピー"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {copiedKey === 'loginId' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               ) : <span className="text-muted-foreground italic">未設定</span>}
@@ -260,8 +265,19 @@ export default function CompanyDetail({ company, events, files }: Props) {
               {password ? (
                 <div className="flex items-center gap-1">
                   <span className="font-mono">{showPassword ? password : '••••••••'}</span>
-                  <button onClick={() => setShowPassword(v => !v)} className="text-muted-foreground hover:text-foreground transition-colors">
+                  <button
+                    onClick={() => setShowPassword(v => !v)}
+                    title={showPassword ? '隠す' : '表示'}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  </button>
+                  <button
+                    onClick={() => copyToClipboard(password, 'password')}
+                    title="コピー"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {copiedKey === 'password' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                   </button>
                 </div>
               ) : <span className="text-muted-foreground italic">未設定</span>}

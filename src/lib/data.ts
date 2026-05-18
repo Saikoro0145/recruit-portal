@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { Company, CategoryDef, InternEvent } from '@/types'
+import { decryptPassword, isEncrypted } from './crypto'
 
 const dataDir = path.join(process.cwd(), 'src/data')
 const recruitRoot = process.env.RECRUIT_ROOT
@@ -15,6 +16,14 @@ export function getCompanies(): Company[] {
         c.notes = fs.readFileSync(path.join(recruitRoot, c.readmePath), 'utf-8')
       } catch {
         // readmePath が見つからない場合は JSON の notes にフォールバック
+      }
+    }
+    if (c.password && isEncrypted(c.password)) {
+      try {
+        c.password = decryptPassword(c.password)
+      } catch (err) {
+        console.error(`[crypto] failed to decrypt password for ${c.id}:`, err)
+        c.password = ''
       }
     }
     return c
