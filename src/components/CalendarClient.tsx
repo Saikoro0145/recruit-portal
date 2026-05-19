@@ -133,8 +133,28 @@ const EMPTY_FORM = {
   type: 'deadline' as EventType,
   start: '',
   end: '',
+  allDay: false,
   status: 'pending' as Status,
   note: '',
+}
+
+const toDateValue = (s: string) => (s ? s.split('T')[0] : '')
+
+const toDateTimeValue = (s: string) => {
+  if (!s) return ''
+  if (s.includes('T')) return s.substring(0, 16)
+  return `${s}T09:00`
+}
+
+const formatEventDate = (s: string) => {
+  if (!s) return ''
+  const d = new Date(s)
+  return d.toLocaleString('ja-JP', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    ...(s.includes('T') ? { hour: '2-digit', minute: '2-digit' } : {}),
+  })
 }
 
 export default function CalendarClient({ events, companies, categories }: Props) {
@@ -149,7 +169,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [editMode, setEditMode] = useState(false)
-  const [editForm, setEditForm] = useState({ title: '', type: 'deadline' as EventType, start: '', end: '' })
+  const [editForm, setEditForm] = useState({ title: '', type: 'deadline' as EventType, start: '', end: '', allDay: true })
   const [view, setView] = useState<'dayGridMonth' | 'listMonth'>('dayGridMonth')
 
   const [hiddenCompanies, setHiddenCompanies] = useState<Set<string>>(new Set())
@@ -169,7 +189,8 @@ export default function CalendarClient({ events, companies, categories }: Props)
   }
 
   const handleDateClick = useCallback((arg: DateClickArg) => {
-    setForm({ ...EMPTY_FORM, start: arg.dateStr, end: arg.dateStr })
+    const allDay = !arg.dateStr.includes('T')
+    setForm({ ...EMPTY_FORM, start: arg.dateStr, end: arg.dateStr, allDay })
     setAddOpen(true)
   }, [])
 
@@ -236,6 +257,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
       type: selectedEvent.event.type,
       start: selectedEvent.event.start,
       end: selectedEvent.event.end,
+      allDay: !selectedEvent.event.start.includes('T'),
     })
     setEditMode(true)
   }
@@ -502,21 +524,38 @@ export default function CalendarClient({ events, companies, categories }: Props)
                           </SelectContent>
                         </Select>
                       </div>
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editForm.allDay}
+                          onChange={e => {
+                            const allDay = e.target.checked
+                            setEditForm(f => ({
+                              ...f,
+                              allDay,
+                              start: allDay ? toDateValue(f.start) : toDateTimeValue(f.start),
+                              end: allDay ? toDateValue(f.end) : toDateTimeValue(f.end),
+                            }))
+                          }}
+                          className="h-3.5 w-3.5"
+                        />
+                        終日（時刻を指定しない）
+                      </label>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">開始日</label>
+                          <label className="text-xs text-muted-foreground">{editForm.allDay ? '開始日' : '開始日時'}</label>
                           <Input
-                            type="date"
-                            value={editForm.start.split('T')[0]}
+                            type={editForm.allDay ? 'date' : 'datetime-local'}
+                            value={editForm.allDay ? toDateValue(editForm.start) : toDateTimeValue(editForm.start)}
                             onChange={e => setEditForm(f => ({ ...f, start: e.target.value }))}
                           />
                         </div>
                         {editForm.type !== 'deadline' && (
                           <div className="space-y-1">
-                            <label className="text-xs text-muted-foreground">終了日</label>
+                            <label className="text-xs text-muted-foreground">{editForm.allDay ? '終了日' : '終了日時'}</label>
                             <Input
-                              type="date"
-                              value={editForm.end.split('T')[0]}
+                              type={editForm.allDay ? 'date' : 'datetime-local'}
+                              value={editForm.allDay ? toDateValue(editForm.end) : toDateTimeValue(editForm.end)}
                               onChange={e => setEditForm(f => ({ ...f, end: e.target.value }))}
                             />
                           </div>
@@ -533,12 +572,12 @@ export default function CalendarClient({ events, companies, categories }: Props)
                       <div className="text-sm space-y-1">
                         <div className="flex gap-2">
                           <span className="text-muted-foreground w-16">開始</span>
-                          <span className="font-medium">{selectedEvent.event.start}</span>
+                          <span className="font-medium">{formatEventDate(selectedEvent.event.start)}</span>
                         </div>
                         {selectedEvent.event.end && selectedEvent.event.end !== selectedEvent.event.start && (
                           <div className="flex gap-2">
                             <span className="text-muted-foreground w-16">終了</span>
-                            <span className="font-medium">{selectedEvent.event.end}</span>
+                            <span className="font-medium">{formatEventDate(selectedEvent.event.end)}</span>
                           </div>
                         )}
                       </div>
@@ -642,21 +681,39 @@ export default function CalendarClient({ events, companies, categories }: Props)
               </Select>
             </div>
 
+            <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.allDay}
+                onChange={e => {
+                  const allDay = e.target.checked
+                  setForm(f => ({
+                    ...f,
+                    allDay,
+                    start: allDay ? toDateValue(f.start) : toDateTimeValue(f.start),
+                    end: allDay ? toDateValue(f.end) : toDateTimeValue(f.end),
+                  }))
+                }}
+                className="h-3.5 w-3.5"
+              />
+              終日（時刻を指定しない）
+            </label>
+
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">開始日</Label>
+                <Label className="text-xs">{form.allDay ? '開始日' : '開始日時'}</Label>
                 <Input
-                  type="date"
-                  value={form.start.split('T')[0]}
+                  type={form.allDay ? 'date' : 'datetime-local'}
+                  value={form.allDay ? toDateValue(form.start) : toDateTimeValue(form.start)}
                   onChange={e => setForm(f => ({ ...f, start: e.target.value }))}
                 />
               </div>
               {form.type !== 'deadline' && (
                 <div className="space-y-1">
-                  <Label className="text-xs">終了日</Label>
+                  <Label className="text-xs">{form.allDay ? '終了日' : '終了日時'}</Label>
                   <Input
-                    type="date"
-                    value={form.end.split('T')[0]}
+                    type={form.allDay ? 'date' : 'datetime-local'}
+                    value={form.allDay ? toDateValue(form.end) : toDateTimeValue(form.end)}
                     onChange={e => setForm(f => ({ ...f, end: e.target.value }))}
                   />
                 </div>
