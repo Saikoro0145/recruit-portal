@@ -17,6 +17,17 @@ interface CalendarEvent {
   }
 }
 
+// FullCalendar で最終日の描画がずれないようにするためのオフセット
+function addOneDay(dateStr: string) {
+  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + 1)
+  const nextYear = date.getFullYear()
+  const nextMonth = String(date.getMonth() + 1).padStart(2, '0')
+  const nextDay = String(date.getDate()).padStart(2, '0')
+  return `${nextYear}-${nextMonth}-${nextDay}`
+}
+
 export default function CalendarPage() {
   const companies = getCompanies()
   const events = getEvents()
@@ -29,12 +40,14 @@ export default function CalendarPage() {
       const company = companyMap[event.companyId]
       if (!company) return null
       const isDeadline = event.type === 'deadline'
+      const allDay = isDeadline ? true : !event.start.includes('T')
+      const actualEnd = isDeadline ? event.start : event.end
       return {
         id: event.id,
         title: event.title,
         start: event.start,
-        end: isDeadline ? event.start : event.end,
-        allDay: isDeadline ? true : !event.start.includes('T'),
+        end: allDay ? addOneDay(actualEnd || event.start) : actualEnd,
+        allDay,
         backgroundColor: company.color,
         borderColor: company.color,
         textColor: '#ffffff',
