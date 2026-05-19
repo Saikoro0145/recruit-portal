@@ -48,9 +48,13 @@ function formatEventWhen(s: string) {
 const WEEKDAY_JA = ['日', '月', '火', '水', '木', '金', '土']
 
 export default function DashboardPage() {
-  const companies = getCompanies()
-  const events = getEvents()
+  const allCompanies = getCompanies()
+  const allEvents = getEvents()
   const categories = getCategories()
+  const suspendedIds = new Set(allCompanies.filter(c => c.suspended).map(c => c.id))
+  const companies = allCompanies.filter(c => !c.suspended)
+  const events = allEvents.filter(e => !suspendedIds.has(e.companyId))
+  const suspendedCount = suspendedIds.size
   const categoryLabels = Object.fromEntries(categories.map(c => [c.id, c.label]))
   const companyMap = new Map(companies.map(c => [c.id, c]))
 
@@ -133,7 +137,12 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6">
       <div className="mb-6 flex flex-wrap items-baseline gap-3">
         <h1 className="text-2xl font-bold">選考ステータスダッシュボード</h1>
-        <span className="text-sm text-muted-foreground">{total}社</span>
+        <span className="text-sm text-muted-foreground">
+          {total}社
+          {suspendedCount > 0 && (
+            <span className="text-muted-foreground/60"> (+保留 {suspendedCount})</span>
+          )}
+        </span>
       </div>
 
       {/* サマリー */}

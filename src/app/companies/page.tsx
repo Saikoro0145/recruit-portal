@@ -34,9 +34,12 @@ export default function CompaniesPage() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  const activeCompanies = companies.filter(c => !c.suspended)
+  const suspendedCompanies = companies.filter(c => c.suspended)
+
   const grouped = categories.map(cat => ({
     cat,
-    companies: companies.filter(c => c.category === cat.id),
+    companies: activeCompanies.filter(c => c.category === cat.id),
   }))
 
   const renderCard = (company: ReturnType<typeof getCompanies>[number]) => {
@@ -106,7 +109,12 @@ export default function CompaniesPage() {
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold flex-1">企業一覧</h1>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-sm text-muted-foreground">{companies.length}社</span>
+          <span className="text-sm text-muted-foreground">
+            {activeCompanies.length}社
+            {suspendedCompanies.length > 0 && (
+              <span className="text-muted-foreground/60"> (+保留 {suspendedCompanies.length})</span>
+            )}
+          </span>
           <AddCategoryDialog categories={categories} />
           <AddCompanyDialog categories={categories} companies={companies} />
         </div>
@@ -137,6 +145,22 @@ export default function CompaniesPage() {
           </section>
         ))}
       </div>
+
+      {suspendedCompanies.length > 0 && (
+        <details className="mt-12 group">
+          <summary className="cursor-pointer flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground select-none">
+            <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+            <span className="font-medium">保留中の企業</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{suspendedCompanies.length}社</span>
+            <span className="text-xs text-muted-foreground/70">
+              サマー見送り・冬/本選考で再検討
+            </span>
+          </summary>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-70">
+            {suspendedCompanies.map(renderCard)}
+          </div>
+        </details>
+      )}
     </div>
   )
 }

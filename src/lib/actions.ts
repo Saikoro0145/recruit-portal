@@ -85,6 +85,21 @@ export async function addCompany(data: {
   revalidateAll()
 }
 
+export async function toggleCompanySuspended(id: string, suspended: boolean) {
+  const companiesPath = path.join(dataDir, 'companies.json')
+  const companies: Company[] = JSON.parse(fs.readFileSync(companiesPath, 'utf-8'))
+  const idx = companies.findIndex(c => c.id === id)
+  if (idx !== -1) {
+    if (suspended) {
+      companies[idx].suspended = true
+    } else {
+      delete companies[idx].suspended
+    }
+    fs.writeFileSync(companiesPath, JSON.stringify(companies, null, 2))
+  }
+  revalidateAll()
+}
+
 export async function updateCompanyAccount(id: string, mypageUrl: string, loginId: string, url: string, webTestType?: string, password?: string) {
   const companies: Company[] = JSON.parse(fs.readFileSync(path.join(dataDir, 'companies.json'), 'utf-8'))
   const idx = companies.findIndex(c => c.id === id)

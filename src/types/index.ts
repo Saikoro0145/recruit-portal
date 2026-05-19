@@ -20,6 +20,7 @@ export interface Company {
   loginId?: string
   webTestType?: string
   password?: string
+  suspended?: boolean
 }
 
 export interface InternEvent {
