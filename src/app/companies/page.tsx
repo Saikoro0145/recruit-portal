@@ -6,6 +6,8 @@ import AddCompanyDialog from '@/components/AddCompanyDialog'
 import AddCategoryDialog from '@/components/AddCategoryDialog'
 import DeleteCategoryButton from '@/components/DeleteCategoryButton'
 
+export const dynamic = 'force-dynamic'
+
 const STATUS_LABELS: Record<string, string> = {
   pending: '未対応',
   applied: '応募済',
@@ -79,7 +81,9 @@ export default function CompaniesPage() {
               <div className="text-xs bg-orange-50 border border-orange-200 rounded p-2">
                 <span className="text-orange-700 font-medium">次の締切: </span>
                 <span className="text-orange-800">
-                  {nextDeadline.start.split('T')[0]} {nextDeadline.title}
+                  {nextDeadline.start.includes('T')
+                    ? `${nextDeadline.start.split('T')[0]} ${nextDeadline.start.split('T')[1].substring(0, 5)}`
+                    : nextDeadline.start.split('T')[0]} {nextDeadline.title}
                 </span>
               </div>
             )}

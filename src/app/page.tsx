@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { getCompanies, getEvents, getCategories } from '@/lib/data'
+
+export const dynamic = 'force-dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -35,6 +37,12 @@ function daysUntil(dateStr: string, today: Date) {
 
 function formatMMDD(date: Date) {
   return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+function formatEventWhen(s: string) {
+  const [datePart, timePart] = s.split('T')
+  if (!timePart) return datePart
+  return `${datePart} ${timePart.substring(0, 5)}`
 }
 
 const WEEKDAY_JA = ['日', '月', '火', '水', '木', '金', '土']
@@ -194,7 +202,7 @@ export default function DashboardPage() {
                           {e.title}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {company?.name ?? '不明'} ・ {TYPE_LABELS[e.type]} ・ {e.start.split('T')[0]}
+                          {company?.name ?? '不明'} ・ {TYPE_LABELS[e.type]} ・ {formatEventWhen(e.start)}
                         </div>
                       </div>
                     </Link>

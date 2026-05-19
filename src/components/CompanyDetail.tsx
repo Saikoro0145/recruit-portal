@@ -56,7 +56,7 @@ export default function CompanyDetail({ company, events, files }: Props) {
     Object.fromEntries(events.map(e => [e.id, e.status]))
   )
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ title: '', type: 'deadline' as InternEvent['type'], start: '', end: '' })
+  const [editForm, setEditForm] = useState({ title: '', type: 'deadline' as InternEvent['type'], start: '', end: '', allDay: true })
   const [officialUrl, setOfficialUrl] = useState(company.url ?? '')
   const [mypageUrl, setMypageUrl] = useState(company.mypageUrl ?? '')
   const [loginId, setLoginId] = useState(company.loginId ?? '')
@@ -125,8 +125,21 @@ export default function CompanyDetail({ company, events, files }: Props) {
   }
 
   const handleEditOpen = (event: InternEvent) => {
-    setEditForm({ title: event.title, type: event.type, start: event.start, end: event.end })
+    setEditForm({
+      title: event.title,
+      type: event.type,
+      start: event.start,
+      end: event.end,
+      allDay: !event.start.includes('T'),
+    })
     setEditingId(event.id)
+  }
+
+  const toDateValue = (s: string) => (s ? s.split('T')[0] : '')
+  const toDateTimeValue = (s: string) => {
+    if (!s) return ''
+    if (s.includes('T')) return s.substring(0, 16)
+    return `${s}T09:00`
   }
 
   const handleEditSave = (eventId: string) => {
@@ -327,18 +340,35 @@ export default function CompanyDetail({ company, events, files }: Props) {
                         ))}
                       </SelectContent>
                     </Select>
+                    <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={editForm.allDay}
+                        onChange={e => {
+                          const allDay = e.target.checked
+                          setEditForm(f => ({
+                            ...f,
+                            allDay,
+                            start: allDay ? toDateValue(f.start) : toDateTimeValue(f.start),
+                            end: allDay ? toDateValue(f.end) : toDateTimeValue(f.end),
+                          }))
+                        }}
+                        className="h-3 w-3"
+                      />
+                      終日
+                    </label>
                     <Input
-                      type="date"
-                      value={editForm.start.split('T')[0]}
+                      type={editForm.allDay ? 'date' : 'datetime-local'}
+                      value={editForm.allDay ? toDateValue(editForm.start) : toDateTimeValue(editForm.start)}
                       onChange={e => setEditForm(f => ({ ...f, start: e.target.value }))}
-                      className="h-8 text-xs w-36"
+                      className={`h-8 text-xs ${editForm.allDay ? 'w-36' : 'w-44'}`}
                     />
                     {editForm.type !== 'deadline' && (
                       <Input
-                        type="date"
-                        value={editForm.end.split('T')[0]}
+                        type={editForm.allDay ? 'date' : 'datetime-local'}
+                        value={editForm.allDay ? toDateValue(editForm.end) : toDateTimeValue(editForm.end)}
                         onChange={e => setEditForm(f => ({ ...f, end: e.target.value }))}
-                        className="h-8 text-xs w-36"
+                        className={`h-8 text-xs ${editForm.allDay ? 'w-36' : 'w-44'}`}
                       />
                     )}
                     <div className="flex gap-1 ml-auto">
