@@ -33,12 +33,14 @@ export default function CalendarPage() {
   const events = getEvents()
   const categories = getCategories()
 
+  const activeCompanies = companies.filter(c => !c.suspended)
   const companyMap = Object.fromEntries(companies.map(c => [c.id, c]))
 
   const calendarEvents: CalendarEvent[] = events
     .map(event => {
       const company = companyMap[event.companyId]
       if (!company) return null
+      if (company.suspended) return null
       const isDeadline = event.type === 'deadline'
       const allDay = isDeadline ? true : !event.start.includes('T')
       const actualEnd = isDeadline ? event.start : event.end
@@ -56,5 +58,5 @@ export default function CalendarPage() {
     })
     .filter((e): e is CalendarEvent => e !== null)
 
-  return <CalendarClient events={calendarEvents} companies={companies} categories={categories} />
+  return <CalendarClient events={calendarEvents} companies={activeCompanies} categories={categories} />
 }

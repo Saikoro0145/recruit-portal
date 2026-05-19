@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, Pencil, Copy, Check, Eye, EyeOff } from 'lucide-react'
+import { Trash2, Pencil, Copy, Check, Eye, EyeOff, PauseCircle, PlayCircle } from 'lucide-react'
 import { Company, InternEvent, Status } from '@/types'
 import { CompanyFile } from '@/lib/data'
-import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount, deleteCompany } from '@/lib/actions'
+import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount, deleteCompany, toggleCompanySuspended } from '@/lib/actions'
 import { Input } from '@/components/ui/input'
 
 const FILE_ICONS: Record<string, string> = {
@@ -124,6 +124,14 @@ export default function CompanyDetail({ company, events, files }: Props) {
     })
   }
 
+  const handleToggleSuspended = () => {
+    const next = !company.suspended
+    startTransition(async () => {
+      await toggleCompanySuspended(company.id, next)
+      router.refresh()
+    })
+  }
+
   const handleEditOpen = (event: InternEvent) => {
     setEditForm({
       title: event.title,
@@ -171,6 +179,11 @@ export default function CompanyDetail({ company, events, files }: Props) {
           style={{ backgroundColor: company.color }}
         />
         <h1 className="text-xl sm:text-2xl font-bold flex-1 min-w-0 truncate">{company.name}</h1>
+        {company.suspended && (
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground border flex-shrink-0">
+            保留中
+          </span>
+        )}
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {mypageUrl && (
             <a href={mypageUrl} target="_blank" rel="noopener noreferrer"
@@ -184,6 +197,16 @@ export default function CompanyDetail({ company, events, files }: Props) {
               公式サイト ↗
             </a>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            onClick={handleToggleSuspended}
+            disabled={isPending}
+            title={company.suspended ? '保留を解除' : '保留にする'}
+          >
+            {company.suspended ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
