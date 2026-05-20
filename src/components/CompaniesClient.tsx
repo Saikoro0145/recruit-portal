@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Grid2X2, List, Search, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -120,11 +120,21 @@ function getCompanyNameSearchText(company: Company) {
   ].join(' ').toLowerCase()
 }
 
+const VALID_STATUS_FILTERS: StatusFilter[] = ['all', 'suspended', 'in_progress', 'not_applied', 'passed', 'rejected', 'done']
+
+function isStatusFilter(value: string | null): value is StatusFilter {
+  return value !== null && (VALID_STATUS_FILTERS as string[]).includes(value)
+}
+
 export default function CompaniesClient({ companies, events, categories }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialStatus = searchParams?.get('status') ?? null
   const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    isStatusFilter(initialStatus) ? initialStatus : 'all'
+  )
   const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'deadline' | 'no_deadline'>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
 
