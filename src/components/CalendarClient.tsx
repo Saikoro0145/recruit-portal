@@ -172,20 +172,30 @@ export default function CalendarClient({ events, companies, categories }: Props)
   const [editForm, setEditForm] = useState({ title: '', type: 'deadline' as EventType, start: '', end: '', allDay: true })
   const [view, setView] = useState<'dayGridMonth' | 'listMonth'>('dayGridMonth')
 
-  const [hiddenCompanies, setHiddenCompanies] = useState<Set<string>>(new Set())
+  const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(
+    () => new Set(companies.map(c => c.id))
+  )
   const [deadlineOpen, setDeadlineOpen] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const toggleCompany = (id: string) => {
-    setHiddenCompanies(prev => {
+  const toggleCompanySelection = (id: string) => {
+    setSelectedCompanies(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
+  }
+
+  const selectAllCompanies = () => {
+    setSelectedCompanies(new Set(companies.map(c => c.id)))
+  }
+
+  const clearSelectedCompanies = () => {
+    setSelectedCompanies(new Set())
   }
 
   const handleDateClick = useCallback((arg: DateClickArg) => {
@@ -288,7 +298,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
     calendarRef.current?.getApi().changeView(v)
   }
 
-  const visibleEvents = events.filter(e => !hiddenCompanies.has(e.extendedProps.event.companyId))
+  const visibleEvents = events.filter(e => selectedCompanies.has(e.extendedProps.event.companyId))
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -299,7 +309,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
     return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
   }
 
-  const upcomingDeadlines = events
+  const upcomingDeadlines = visibleEvents
     .filter(e => e.extendedProps.event.type === 'deadline' && new Date(e.extendedProps.event.start) >= today)
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
 
@@ -324,28 +334,76 @@ export default function CalendarClient({ events, companies, categories }: Props)
   const sidebarContent = (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">企業</h2>
-        <ul className="space-y-1">
-          {companies.map(c => {
-            const hidden = hiddenCompanies.has(c.id)
+        <div className="mb-2 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">企業</h2>
+            <span className="text-xs text-muted-foreground">{selectedCompanies.size}/{companies.length}社表示</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <Button
+              variant="outline"
+              size="xs"
+              className="h-7 text-xs"
+              onClick={selectAllCompanies}
+              disabled={selectedCompanies.size === companies.length}
+            >
+              全選択
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
+              className="h-7 text-xs"
+              onClick={clearSelectedCompanies}
+              disabled={selectedCompanies.size === 0}
+            >
+              全解除
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {categories.map(category => {
+            const categoryCompanies = companies.filter(c => c.category === category.id)
+            if (categoryCompanies.length === 0) return null
+            const selectedCount = categoryCompanies.filter(c => selectedCompanies.has(c.id)).length
+
             return (
-              <li key={c.id}>
-                <button
-                  onClick={() => toggleCompany(c.id)}
-                  className="w-full flex items-center gap-2 text-sm hover:bg-accent rounded-md px-2 py-1 transition-colors"
-                >
-                  <span
-                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 transition-colors"
-                    style={{ backgroundColor: hidden ? 'transparent' : c.color, borderColor: c.color }}
-                  />
-                  <span className={`truncate ${hidden ? 'text-muted-foreground line-through' : ''}`}>
-                    {c.name}
+              <details key={category.id} className="group rounded-lg border bg-card">
+                <summary className="flex cursor-pointer select-none items-center gap-2 px-2 py-1.5 text-sm font-medium hover:bg-muted/60">
+                  <span className="inline-block text-xs transition-transform group-open:rotate-90">▶</span>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: category.color }} />
+                  <span className="min-w-0 flex-1 truncate">{category.label}</span>
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    {selectedCount}/{categoryCompanies.length}
                   </span>
-                </button>
-              </li>
+                </summary>
+                <ul className="space-y-0.5 border-t p-1">
+                  {categoryCompanies.map(c => {
+                    const selected = selectedCompanies.has(c.id)
+                    return (
+                      <li key={c.id} className={`rounded-md ${selected ? 'bg-primary/10' : ''}`}>
+                        <button
+                          onClick={() => toggleCompanySelection(c.id)}
+                          className="flex w-full min-w-0 items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                          title={selected ? 'カレンダーから非表示' : 'カレンダーに表示'}
+                        >
+                          <span
+                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2 text-[10px] font-bold text-white transition-colors"
+                            style={{ backgroundColor: selected ? c.color : 'transparent', borderColor: c.color }}
+                          >
+                            {selected ? '✓' : ''}
+                          </span>
+                          <span className={`truncate ${selected ? '' : 'text-muted-foreground'}`}>
+                            {c.name}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </details>
             )
           })}
-        </ul>
+        </div>
       </div>
 
       {upcomingDeadlines.length > 0 && (
@@ -359,7 +417,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
           </button>
           {deadlineOpen && (
             <ul className="space-y-2">
-              {upcomingDeadlines.map(e => {
+              {upcomingDeadlines.slice(0, 12).map(e => {
                 const days = daysUntil(e.start)
                 const urgencyClass = days <= 3
                   ? 'text-red-600 font-bold'
@@ -370,7 +428,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
                   <li key={e.id} className="flex items-start gap-2 text-xs">
                     <span className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: e.backgroundColor }} />
                     <div className="min-w-0">
-                      <div className={urgencyClass}>あと{days}日</div>
+                      <div className={urgencyClass}>{days === 0 ? '今日' : `あと${days}日`}</div>
                       <div className="truncate text-foreground leading-tight">{e.title}</div>
                       <div className="truncate text-muted-foreground leading-tight">{e.extendedProps.company.name}</div>
                     </div>
@@ -382,17 +440,6 @@ export default function CalendarClient({ events, companies, categories }: Props)
         </div>
       )}
 
-      <div>
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">凡例</h2>
-        <ul className="space-y-1 text-xs text-muted-foreground">
-          <li className="flex items-center gap-2"><span>⚠</span><span>締切</span></li>
-          <li className="flex items-center gap-2">
-            <span className="w-4 h-2 rounded bg-blue-500 opacity-80" />
-            <span>インターン期間</span>
-          </li>
-        </ul>
-      </div>
-
       {overlaps.size > 0 && (
         <OverlapWarning internships={internships.filter(e => overlaps.has(e.id))} />
       )}
@@ -402,7 +449,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
   return (
     <div className="flex gap-4 p-4 md:h-[calc(100vh-3.5rem)]">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-52 flex-shrink-0 overflow-y-auto">
+      <aside className="hidden md:flex flex-col w-64 flex-shrink-0 overflow-y-auto">
         {sidebarContent}
       </aside>
 
@@ -419,7 +466,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
             ☰ フィルター
           </Button>
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetContent side="left" className="w-64 overflow-y-auto">
+            <SheetContent side="left" className="w-72 overflow-y-auto">
               <SheetHeader className="mb-4">
                 <SheetTitle>フィルター</SheetTitle>
               </SheetHeader>
