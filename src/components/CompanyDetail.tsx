@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, Pencil, Copy, Check, Eye, EyeOff, PauseCircle, PlayCircle } from 'lucide-react'
+import { Trash2, Pencil, Copy, Check, Eye, EyeOff, PauseCircle, PlayCircle, ExternalLink } from 'lucide-react'
 import { Company, InternEvent, Status } from '@/types'
 import { CompanyFile } from '@/lib/data'
 import { updateCompanyNotes, updateEventStatus, deleteEvent, updateEvent, updateCompanyAccount, deleteCompany, toggleCompanySuspended } from '@/lib/actions'
@@ -169,6 +169,165 @@ export default function CompanyDetail({ company, events, files }: Props) {
   }
 
   const isPast = (dateStr: string) => new Date(dateStr) < today
+  const isClosedStatus = (status: Status) => status === 'done' || status === 'rejected' || status === 'passed'
+  const activeEvents = sortedEvents.filter(event => !isClosedStatus(eventStatuses[event.id] ?? event.status))
+  const completedEvents = sortedEvents.filter(event => isClosedStatus(eventStatuses[event.id] ?? event.status))
+  const overdueEvents = activeEvents.filter(event => isPast(event.start))
+  const nextDeadline = activeEvents.find(
+    event => event.type === 'deadline' && new Date(event.start) >= today
+  )
+  const nextUpcoming = activeEvents.find(event => new Date(event.start) >= today)
+
+  const renderEventRow = (event: InternEvent, muted = false) => {
+    const past = isPast(event.start)
+    const isDeadline = event.type === 'deadline'
+    const currentStatus = eventStatuses[event.id]
+    const isEditing = editingId === event.id
+
+    if (isEditing) {
+      return (
+        <div key={event.id} className="flex items-center gap-2 p-3 rounded-lg border bg-card flex-wrap">
+          <div
+            className="w-1 h-10 rounded-full flex-shrink-0"
+            style={{ backgroundColor: company.color }}
+          />
+          <Input
+            value={editForm.title}
+            onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+            className="h-8 text-sm flex-1 min-w-[120px]"
+          />
+          <Select value={editForm.type} onValueChange={v => setEditForm(f => ({ ...f, type: v as InternEvent['type'] }))}>
+            <SelectTrigger className="h-8 text-xs w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(TYPE_LABELS).map(([val, label]) => (
+                <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={editForm.allDay}
+              onChange={e => {
+                const allDay = e.target.checked
+                setEditForm(f => ({
+                  ...f,
+                  allDay,
+                  start: allDay ? toDateValue(f.start) : toDateTimeValue(f.start),
+                  end: allDay ? toDateValue(f.end) : toDateTimeValue(f.end),
+                }))
+              }}
+              className="h-3 w-3"
+            />
+            終日
+          </label>
+          <Input
+            type={editForm.allDay ? 'date' : 'datetime-local'}
+            value={editForm.allDay ? toDateValue(editForm.start) : toDateTimeValue(editForm.start)}
+            onChange={e => setEditForm(f => ({ ...f, start: e.target.value }))}
+            className={`h-8 text-xs ${editForm.allDay ? 'w-36' : 'w-44'}`}
+          />
+          {editForm.type !== 'deadline' && (
+            <Input
+              type={editForm.allDay ? 'date' : 'datetime-local'}
+              value={editForm.allDay ? toDateValue(editForm.end) : toDateTimeValue(editForm.end)}
+              onChange={e => setEditForm(f => ({ ...f, end: e.target.value }))}
+              className={`h-8 text-xs ${editForm.allDay ? 'w-36' : 'w-44'}`}
+            />
+          )}
+          <div className="flex gap-1 ml-auto">
+            <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} disabled={isPending}>
+              キャンセル
+            </Button>
+            <Button size="sm" onClick={() => handleEditSave(event.id)} disabled={isPending || !editForm.title || !editForm.start}>
+              保存
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={event.id}
+        className={`flex gap-2 sm:gap-3 p-3 rounded-lg border bg-card ${muted ? 'opacity-60' : ''} ${past && !muted ? 'border-orange-200 bg-orange-50/40' : ''}`}
+      >
+        <div
+          className="w-1 rounded-full flex-shrink-0 self-stretch"
+          style={{ backgroundColor: company.color }}
+        />
+
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="sm:w-36 sm:flex-shrink-0">
+            <div className={`text-sm font-medium ${muted ? 'text-muted-foreground line-through' : ''}`}>
+              {formatDate(event.start)}
+            </div>
+            {event.end && event.end !== event.start && !isDeadline && (
+              <div className="text-xs text-muted-foreground">
+                〜 {formatDate(event.end)}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isDeadline && <span className="text-sm">⚠</span>}
+              <span className="text-sm font-medium">{event.title}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
+                {TYPE_LABELS[event.type]}
+              </span>
+              {past && !muted && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 flex-shrink-0">
+                  期限超過
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select
+              value={currentStatus}
+              onValueChange={(v) => handleStatusChange(event.id, v as Status)}
+              disabled={isPending}
+            >
+              <SelectTrigger className="h-8 text-xs w-full sm:w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([val, label]) => (
+                  <SelectItem key={val} value={val} className="text-xs">
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              onClick={() => handleEditOpen(event)}
+              disabled={isPending}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+              onClick={() => handleDelete(event.id)}
+              disabled={isPending}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl">
@@ -185,18 +344,6 @@ export default function CompanyDetail({ company, events, files }: Props) {
           </span>
         )}
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {mypageUrl && (
-            <a href={mypageUrl} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline whitespace-nowrap">
-              マイページ ↗
-            </a>
-          )}
-          {officialUrl && (
-            <a href={officialUrl} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline whitespace-nowrap">
-              公式サイト ↗
-            </a>
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -262,62 +409,92 @@ export default function CompanyDetail({ company, events, files }: Props) {
             </div>
           </div>
         ) : (
-          <div className="space-y-1 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20 flex-shrink-0">公式サイト</span>
-              {officialUrl
-                ? <a href={officialUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{officialUrl}</a>
-                : <span className="text-muted-foreground italic">未設定</span>}
+          <div className="space-y-3 text-xs">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {mypageUrl ? (
+                <a
+                  href={mypageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-transparent bg-primary px-2.5 text-[0.8rem] font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+                >
+                  マイページ
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              ) : (
+                <Button size="sm" className="h-8" variant="outline" disabled>マイページ未設定</Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => copyToClipboard(loginId, 'loginId')}
+                disabled={!loginId}
+              >
+                {copiedKey === 'loginId' ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                ID
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => copyToClipboard(password, 'password')}
+                disabled={!password}
+              >
+                {copiedKey === 'password' ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                PW
+              </Button>
+              {officialUrl ? (
+                <a
+                  href={officialUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  公式サイト
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              ) : (
+                <Button size="sm" className="h-8" variant="outline" disabled>公式サイト未設定</Button>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20 flex-shrink-0">マイページ</span>
-              {mypageUrl
-                ? <a href={mypageUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{mypageUrl}</a>
-                : <span className="text-muted-foreground italic">未設定</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20 flex-shrink-0">ログインID</span>
-              {loginId ? (
-                <div className="flex items-center gap-1">
-                  <span className="font-mono">{loginId}</span>
-                  <button
-                    onClick={() => copyToClipboard(loginId, 'loginId')}
-                    title="コピー"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {copiedKey === 'loginId' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                  </button>
+            <details className="group rounded-lg border bg-muted/25 px-3 py-2">
+              <summary className="flex cursor-pointer select-none items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground">
+                <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                詳細情報
+              </summary>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <div className="text-muted-foreground">ログインID</div>
+                  <div className="mt-0.5 truncate font-mono text-foreground">
+                    {loginId || <span className="font-sans text-muted-foreground italic">未設定</span>}
+                  </div>
                 </div>
-              ) : <span className="text-muted-foreground italic">未設定</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20 flex-shrink-0">Webテスト</span>
-              {webTestType
-                ? <span className="font-medium">{webTestType}</span>
-                : <span className="text-muted-foreground italic">未設定</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground w-20 flex-shrink-0">パスワード</span>
-              {password ? (
-                <div className="flex items-center gap-1">
-                  <span className="font-mono">{showPassword ? password : '••••••••'}</span>
-                  <button
-                    onClick={() => setShowPassword(v => !v)}
-                    title={showPassword ? '隠す' : '表示'}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  </button>
-                  <button
-                    onClick={() => copyToClipboard(password, 'password')}
-                    title="コピー"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {copiedKey === 'password' ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                  </button>
+                <div className="min-w-0">
+                  <div className="text-muted-foreground">Webテスト</div>
+                  <div className="mt-0.5 truncate font-medium text-foreground">
+                    {webTestType || <span className="font-normal text-muted-foreground italic">未設定</span>}
+                  </div>
                 </div>
-              ) : <span className="text-muted-foreground italic">未設定</span>}
-            </div>
+                <div className="min-w-0 sm:col-span-2">
+                  <div className="text-muted-foreground">パスワード</div>
+                  <div className="mt-0.5 flex items-center gap-2">
+                    <span className="min-w-0 truncate font-mono text-foreground">
+                      {password ? (showPassword ? password : '••••••••') : <span className="font-sans text-muted-foreground italic">未設定</span>}
+                    </span>
+                    {password && (
+                      <button
+                        onClick={() => setShowPassword(v => !v)}
+                        title={showPassword ? '隠す' : '表示'}
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         )}
       </div>
@@ -331,160 +508,67 @@ export default function CompanyDetail({ company, events, files }: Props) {
 
         {/* Events Tab */}
         <TabsContent value="events">
-          <div className="space-y-2">
+          <div className="space-y-5">
             {sortedEvents.length === 0 && (
               <p className="text-muted-foreground text-sm">イベントがありません</p>
             )}
-            {sortedEvents.map(event => {
-              const past = isPast(event.start)
-              const isDeadline = event.type === 'deadline'
-              const currentStatus = eventStatuses[event.id]
-              const isEditing = editingId === event.id
 
-              if (isEditing) {
-                return (
-                  <div key={event.id} className="flex items-center gap-2 p-3 rounded-lg border bg-card flex-wrap">
-                    <div
-                      className="w-1 h-10 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: company.color }}
-                    />
-                    <Input
-                      value={editForm.title}
-                      onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                      className="h-8 text-sm flex-1 min-w-[120px]"
-                    />
-                    <Select value={editForm.type} onValueChange={v => setEditForm(f => ({ ...f, type: v as InternEvent['type'] }))}>
-                      <SelectTrigger className="h-8 text-xs w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(TYPE_LABELS).map(([val, label]) => (
-                          <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={editForm.allDay}
-                        onChange={e => {
-                          const allDay = e.target.checked
-                          setEditForm(f => ({
-                            ...f,
-                            allDay,
-                            start: allDay ? toDateValue(f.start) : toDateTimeValue(f.start),
-                            end: allDay ? toDateValue(f.end) : toDateTimeValue(f.end),
-                          }))
-                        }}
-                        className="h-3 w-3"
-                      />
-                      終日
-                    </label>
-                    <Input
-                      type={editForm.allDay ? 'date' : 'datetime-local'}
-                      value={editForm.allDay ? toDateValue(editForm.start) : toDateTimeValue(editForm.start)}
-                      onChange={e => setEditForm(f => ({ ...f, start: e.target.value }))}
-                      className={`h-8 text-xs ${editForm.allDay ? 'w-36' : 'w-44'}`}
-                    />
-                    {editForm.type !== 'deadline' && (
-                      <Input
-                        type={editForm.allDay ? 'date' : 'datetime-local'}
-                        value={editForm.allDay ? toDateValue(editForm.end) : toDateTimeValue(editForm.end)}
-                        onChange={e => setEditForm(f => ({ ...f, end: e.target.value }))}
-                        className={`h-8 text-xs ${editForm.allDay ? 'w-36' : 'w-44'}`}
-                      />
-                    )}
-                    <div className="flex gap-1 ml-auto">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} disabled={isPending}>
-                        キャンセル
-                      </Button>
-                      <Button size="sm" onClick={() => handleEditSave(event.id)} disabled={isPending || !editForm.title || !editForm.start}>
-                        保存
-                      </Button>
-                    </div>
+            {sortedEvents.length > 0 && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="rounded-lg border bg-card p-3">
+                  <div className="text-xs text-muted-foreground">次の締切</div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {nextDeadline ? formatDate(nextDeadline.start) : 'なし'}
                   </div>
-                )
-              }
-
-              return (
-                <div
-                  key={event.id}
-                  className={`flex gap-2 sm:gap-3 p-3 rounded-lg border ${past ? 'opacity-50' : ''} bg-card`}
-                >
-                  {/* Type indicator */}
-                  <div
-                    className="w-1 rounded-full flex-shrink-0 self-stretch"
-                    style={{ backgroundColor: company.color }}
-                  />
-
-                  {/* Content area: stacks on mobile, row on desktop */}
-                  <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-2">
-                    {/* Date */}
-                    <div className="sm:w-36 sm:flex-shrink-0">
-                      <div className={`text-sm font-medium ${past ? 'text-muted-foreground line-through' : ''}`}>
-                        {formatDate(event.start)}
-                      </div>
-                      {event.end && event.end !== event.start && !isDeadline && (
-                        <div className="text-xs text-muted-foreground">
-                          〜 {formatDate(event.end)}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Title & type */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {isDeadline && <span className="text-sm">⚠</span>}
-                        <span className="text-sm font-medium">{event.title}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
-                          {TYPE_LABELS[event.type]}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Status selector + actions */}
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={currentStatus}
-                        onValueChange={(v) => handleStatusChange(event.id, v as Status)}
-                        disabled={isPending}
-                      >
-                        <SelectTrigger className="h-8 text-xs w-full sm:w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([val, label]) => (
-                            <SelectItem key={val} value={val} className="text-xs">
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleEditOpen(event)}
-                        disabled={isPending}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(event.id)}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {nextDeadline?.title ?? '未対応の締切はありません'}
                   </div>
                 </div>
-              )
-            })}
+                <div className="rounded-lg border bg-card p-3">
+                  <div className="text-xs text-muted-foreground">未完了</div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {activeEvents.length}件
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {overdueEvents.length > 0 ? `期限超過 ${overdueEvents.length}件` : '期限超過なし'}
+                  </div>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <div className="text-xs text-muted-foreground">直近予定</div>
+                  <div className="mt-1 text-sm font-semibold">
+                    {nextUpcoming ? formatDate(nextUpcoming.start) : 'なし'}
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {nextUpcoming?.title ?? '今後の予定はありません'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeEvents.length > 0 && (
+              <section className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold">未完了・進行中</h2>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    {activeEvents.length}件
+                  </span>
+                </div>
+                {activeEvents.map(event => renderEventRow(event))}
+              </section>
+            )}
+
+            {completedEvents.length > 0 && (
+              <details className="group">
+                <summary className="flex cursor-pointer select-none items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                  <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                  <span className="font-medium">完了済み・終了</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{completedEvents.length}件</span>
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {completedEvents.map(event => renderEventRow(event, true))}
+                </div>
+              </details>
+            )}
           </div>
         </TabsContent>
 
