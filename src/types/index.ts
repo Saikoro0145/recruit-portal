@@ -23,6 +23,12 @@ export interface Company {
   suspended?: boolean
 }
 
+export interface Settings {
+  spiMypageUrl?: string
+  spiTestCenterId?: string
+  spiPassword?: string
+}
+
 export interface InternEvent {
   id: string
   companyId: string

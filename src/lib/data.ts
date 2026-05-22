@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { Company, CategoryDef, InternEvent } from '@/types'
+import { Company, CategoryDef, InternEvent, Settings } from '@/types'
 import { decryptPassword, isEncrypted } from './crypto'
 
 const dataDir = path.join(process.cwd(), 'src/data')
@@ -36,6 +36,21 @@ export function getCategories(): CategoryDef[] {
 
 export function getEvents(): InternEvent[] {
   return JSON.parse(fs.readFileSync(path.join(dataDir, 'events.json'), 'utf-8'))
+}
+
+export function getSettings(): Settings {
+  const settingsPath = path.join(dataDir, 'settings.json')
+  if (!fs.existsSync(settingsPath)) return {}
+  const settings: Settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+  if (settings.spiPassword && isEncrypted(settings.spiPassword)) {
+    try {
+      settings.spiPassword = decryptPassword(settings.spiPassword)
+    } catch (err) {
+      console.error('[crypto] failed to decrypt spiPassword:', err)
+      settings.spiPassword = ''
+    }
+  }
+  return settings
 }
 
 export interface CompanyFile {

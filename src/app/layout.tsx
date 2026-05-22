@@ -52,6 +52,12 @@ export default function RootLayout({
               >
                 企業一覧
               </Link>
+              <Link
+                href="/settings"
+                className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                設定
+              </Link>
             </div>
           </div>
         </nav>
