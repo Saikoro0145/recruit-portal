@@ -2,7 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import { revalidatePath } from 'next/cache'
-import { Company, CategoryDef, InternEvent } from '@/types'
+import { Company, CategoryDef, InternEvent, Settings } from '@/types'
 import { encryptPassword } from './crypto'
 
 const dataDir = path.join(process.cwd(), 'src/data')
@@ -15,6 +15,7 @@ function revalidateAll() {
   revalidatePath('/calendar')
   revalidatePath('/companies')
   revalidatePath('/companies/[id]', 'page')
+  revalidatePath('/settings')
 }
 
 export async function updateCompanyNotes(id: string, notes: string) {
@@ -159,6 +160,21 @@ export async function deleteCategory(id: string) {
     if (entries.length === 0) fs.rmdirSync(folderAbs)
   }
 
+  revalidateAll()
+}
+
+export async function updateSpiCredentials(spiMypageUrl: string, spiTestCenterId: string, spiPassword: string) {
+  const settingsPath = path.join(dataDir, 'settings.json')
+  const current: Settings = fs.existsSync(settingsPath)
+    ? JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
+    : {}
+  const next: Settings = {
+    ...current,
+    spiMypageUrl,
+    spiTestCenterId,
+    spiPassword: spiPassword ? encryptPassword(spiPassword) : '',
+  }
+  fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2))
   revalidateAll()
 }
 
