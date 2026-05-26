@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback } from 'react'
+import type { ClipboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid/index.js'
@@ -28,8 +29,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import Link from 'next/link'
+
+type TextDetectorConstructor = new () => {
+  detect: (source: ImageBitmap) => Promise<Array<{ rawValue: string }>>
+}
+
+interface WindowWithTextDetector extends Window {
+  TextDetector?: TextDetectorConstructor
+}
 
 interface CalendarEvent {
   id: string
@@ -157,6 +167,44 @@ const formatEventDate = (s: string) => {
   })
 }
 
+const normalizeScheduleText = (value: string) =>
+  value
+    .replace(/[０-９]/g, char => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    .replace(/[〜～－ー―–—]/g, '-')
+
+const toDateString = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+const parseScheduleDates = (value: string) => {
+  const normalized = normalizeScheduleText(value)
+  const currentYear = new Date().getFullYear()
+  const matches = [
+    ...normalized.matchAll(
+      /(?:(\d{4})\s*(?:年|[\/.-])\s*)?(\d{1,2})\s*(?:月|[\/.-])\s*(\d{1,2})\s*日?/g
+    ),
+  ]
+
+  if (matches.length === 0) return null
+
+  const firstYear = matches[0][1] ? Number(matches[0][1]) : currentYear
+  const toDate = (match: RegExpMatchArray) => ({
+    year: match[1] ? Number(match[1]) : firstYear,
+    month: Number(match[2]),
+    day: Number(match[3]),
+  })
+
+  const start = toDate(matches[0])
+  const end = matches[1] ? toDate(matches[1]) : start
+  const startDate = toDateString(start.year, start.month, start.day)
+  const endDate = toDateString(end.year, end.month, end.day)
+
+  return {
+    start: startDate <= endDate ? startDate : endDate,
+    end: startDate <= endDate ? endDate : startDate,
+    isRange: startDate !== endDate,
+  }
+}
+
 export default function CalendarClient({ events, companies, categories }: Props) {
   const categoryLabels = Object.fromEntries(categories.map(c => [c.id, c.label]))
   const router = useRouter()
@@ -178,6 +226,8 @@ export default function CalendarClient({ events, companies, categories }: Props)
   const [form, setForm] = useState(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [scheduleText, setScheduleText] = useState('')
+  const [scheduleMessage, setScheduleMessage] = useState('')
 
   const toggleCompany = (id: string) => {
     setHiddenCompanies(prev => {
@@ -194,6 +244,48 @@ export default function CalendarClient({ events, companies, categories }: Props)
     setAddOpen(true)
   }, [])
 
+  const applyScheduleText = (value: string) => {
+    setScheduleText(value)
+    const parsed = parseScheduleDates(value)
+    if (!parsed) {
+      setScheduleMessage(value.trim() ? '日付を読み取れませんでした' : '')
+      return
+    }
+
+    setForm(f => ({
+      ...f,
+      start: parsed.start,
+      end: parsed.end,
+      allDay: true,
+      type: parsed.isRange && f.type === 'deadline' ? 'internship' : f.type,
+    }))
+    setScheduleMessage(`日程を仮入力しました: ${parsed.start}${parsed.isRange ? ` - ${parsed.end}` : ''}`)
+  }
+
+  const handleSchedulePaste = async (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageItem = [...event.clipboardData.items].find(item => item.type.startsWith('image/'))
+    if (!imageItem) return
+
+    const file = imageItem.getAsFile()
+    const TextDetector = (window as WindowWithTextDetector).TextDetector
+    if (!file || !TextDetector) {
+      setScheduleMessage('画像OCRはこのブラウザでは利用できません。文字列を貼り付けてください。')
+      return
+    }
+
+    event.preventDefault()
+    setScheduleMessage('画像から日程を読み取り中...')
+    try {
+      const bitmap = await createImageBitmap(file)
+      const detector = new TextDetector()
+      const results = await detector.detect(bitmap)
+      const text = results.map(result => result.rawValue).join('\n')
+      applyScheduleText(text)
+    } catch {
+      setScheduleMessage('画像から日程を読み取れませんでした。文字列を貼り付けてください。')
+    }
+  }
+
   const handleAddSave = async () => {
     if (!form.companyId || !form.title || !form.start) return
     setAdding(true)
@@ -209,6 +301,8 @@ export default function CalendarClient({ events, companies, categories }: Props)
       })
       setAddOpen(false)
       setForm(EMPTY_FORM)
+      setScheduleText('')
+      setScheduleMessage('')
       router.refresh()
     } finally {
       setAdding(false)
@@ -286,6 +380,12 @@ export default function CalendarClient({ events, companies, categories }: Props)
   const switchView = (v: 'dayGridMonth' | 'listMonth') => {
     setView(v)
     calendarRef.current?.getApi().changeView(v)
+  }
+
+  const resetAddDialog = () => {
+    setForm(EMPTY_FORM)
+    setScheduleText('')
+    setScheduleMessage('')
   }
 
   const visibleEvents = events.filter(e => !hiddenCompanies.has(e.extendedProps.event.companyId))
@@ -430,7 +530,7 @@ export default function CalendarClient({ events, companies, categories }: Props)
             <Button
               size="sm"
               variant="outline"
-              onClick={() => { setForm({ ...EMPTY_FORM }); setAddOpen(true) }}
+              onClick={() => { resetAddDialog(); setAddOpen(true) }}
               className="text-xs h-7"
             >
               ＋ 追加
@@ -637,13 +737,28 @@ export default function CalendarClient({ events, companies, categories }: Props)
       </Dialog>
 
       {/* Add event dialog */}
-      <Dialog open={addOpen} onOpenChange={v => { setAddOpen(v); if (!v) setForm(EMPTY_FORM) }}>
-        <DialogContent className="max-w-sm">
+      <Dialog open={addOpen} onOpenChange={v => { setAddOpen(v); if (!v) resetAddDialog() }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>イベントを追加</DialogTitle>
             <DialogDescription>カレンダーに新しいイベントを追加します</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <Label htmlFor="schedule-text" className="text-xs">日程テキスト</Label>
+              <Textarea
+                id="schedule-text"
+                value={scheduleText}
+                onChange={e => applyScheduleText(e.target.value)}
+                onPaste={handleSchedulePaste}
+                placeholder="例: 2026年9月7日（月）～2026年9月11日（金）"
+                className="min-h-16 text-sm"
+              />
+              {scheduleMessage && (
+                <p className="text-xs text-muted-foreground">{scheduleMessage}</p>
+              )}
+            </div>
+
             <div className="space-y-1">
               <Label className="text-xs">企業</Label>
               <Select value={form.companyId} onValueChange={v => setForm(f => ({ ...f, companyId: v ?? '' }))}>
